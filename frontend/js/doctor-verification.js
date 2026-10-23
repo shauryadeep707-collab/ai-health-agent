@@ -99,21 +99,21 @@ const DoctorVerification = {
           <p style="font-size:0.95rem; max-width:750px; line-height:1.5;">${statusDesc}</p>
           ${vRec.name_match_score ? `<p style="font-size:0.85rem; margin-top:0.4rem; opacity:0.9;"><strong>Identity Match Score:</strong> ${vRec.name_match_score}% | <strong>Issuer:</strong> ${vRec.issuer_id || 'NMC / DigiLocker Setu'}</p>` : ''}
         </div>
-        <div style="display:flex; flex-direction:column; gap:0.5rem; min-width:200px;">
-          ${status !== 'VERIFIED' ? `
-            <button onclick="DoctorVerification.initiateDigiLockerFlow()" class="btn-digilocker">
-              <span class="digilocker-emblem">DL</span> Verify with DigiLocker
+        <div style="display:flex; flex-direction:column; gap:0.5rem; min-width:220px;">
+          <button onclick="DoctorVerification.initiateDigiLockerFlow()" class="btn-digilocker">
+            <span class="digilocker-emblem">DL</span> ${status === 'VERIFIED' ? 'Open DigiLocker Gateway' : 'Verify with DigiLocker'}
+          </button>
+          <button onclick="DoctorVerification.openSandboxModal()" class="btn btn-outline btn-sm">
+            🧪 Test DigiLocker Sandbox
+          </button>
+          ${status === 'VERIFIED' ? `
+            <button onclick="DoctorVerification.resetToPending()" class="btn btn-outline btn-sm" style="color:var(--warning); border-color:#fde68a;">
+              🔄 Reset Status to Pending
             </button>
-            <button onclick="DoctorVerification.openSandboxModal()" class="btn btn-outline btn-sm">
-              🧪 Test DigiLocker Sandbox
-            </button>
+          ` : `
             <button onclick="DoctorVerification.requestManualReview()" class="btn btn-outline btn-sm">
               📝 Request Council Review
             </button>
-          ` : `
-            <div style="text-align:right;">
-              <span style="font-size:0.85rem; font-weight:600; color:var(--success);">Verified on ${data.verified_at || 'DigiLocker Gateway'}</span>
-            </div>
           `}
         </div>
       </div>
@@ -137,6 +137,20 @@ const DoctorVerification = {
       }
     } catch (err) {
       alert("Error requesting manual review: " + err.message);
+    }
+  },
+
+  async resetToPending() {
+    try {
+      const res = await Auth.fetchWithAuth("/api/doctor/verification/reset", { method: "POST" });
+      if (!res) return;
+      const data = await res.json();
+      if (data.success) {
+        alert("Status reset to PENDING. You can now test the DigiLocker verification flow again.");
+        this.loadVerificationStatus();
+      }
+    } catch (err) {
+      alert("Error resetting status: " + err.message);
     }
   },
 

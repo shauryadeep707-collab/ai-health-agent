@@ -161,6 +161,20 @@ def sandbox_trigger_scenario():
         "is_sandbox_simulation": True
     })
 
+@doctor_bp.route("/verification/reset", methods=["POST"])
+@jwt_required
+@role_required(["DOCTOR"])
+def reset_verification_status():
+    """Resets doctor verification status to PENDING for testing purposes."""
+    user = request.current_user
+    doc = DoctorProfileRepository.find_by_user_id(user["user_id"])
+    if not doc:
+        return jsonify({"success": False, "error": "Doctor not found."}), 404
+
+    DoctorProfileRepository.update_verification_status(doc["doctor_id"], "PENDING", None)
+    log_audit_event("VERIFICATION_RESET", "DOCTOR_PROFILES", doc["doctor_id"], "SUCCESS")
+    return jsonify({"success": True, "message": "Verification status reset to PENDING.", "verification_status": "PENDING"})
+
 @doctor_bp.route("/verification/status", methods=["GET"])
 @jwt_required
 @role_required(["DOCTOR"])
