@@ -169,7 +169,7 @@ class AIHealthConsultationService:
                 ai_response_text = (
                     f"I understand you are experiencing: **{cleaned_query}**.\n\n"
                     "To give you clear guidance without a long wall of text, let's check a couple of quick questions one by one.\n\n"
-                    "👉 **Question 1 of 3:** On a scale of 1 to 10, how severe or intense is the discomfort right now?"
+                    "**Question 1 of 3:** On a scale of 1 to 10, how severe or intense is the discomfort right now?"
                 )
                 follow_up_questions = [
                     "Mild (1 - 3)",
@@ -183,7 +183,7 @@ class AIHealthConsultationService:
                 # TURN 2: Acknowledge severity & Ask Question 2 (Duration & Onset)
                 ai_response_text = (
                     f"Thank you for sharing the intensity (**{cleaned_query}**).\n\n"
-                    "👉 **Question 2 of 3:** Did this start suddenly out of nowhere, or did it build up gradually over hours or days?"
+                    "**Question 2 of 3:** Did this start suddenly out of nowhere, or did it build up gradually over hours or days?"
                 )
                 follow_up_questions = [
                     "Started today (built up gradually)",
@@ -197,7 +197,7 @@ class AIHealthConsultationService:
                 # TURN 3: Acknowledge duration & Ask Question 3 (Associated Symptoms)
                 ai_response_text = (
                     "Got it, that helps narrow this down.\n\n"
-                    "👉 **Question 3 of 3:** Are you experiencing any other symptoms alongside this (such as fever, nausea, dizziness, or neck stiffness)?"
+                    "**Question 3 of 3:** Are you experiencing any other symptoms alongside this (such as fever, nausea, dizziness, or neck stiffness)?"
                 )
                 follow_up_questions = [
                     "No other symptoms",

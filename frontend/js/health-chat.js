@@ -85,8 +85,6 @@ const HealthChat = {
       this.appendMessage("ai", "Network connection error. Please ensure the backend server is running.");
     }
   },
-    }
-  },
 
   appendMessage(sender, text, disclaimer = "") {
     const container = document.getElementById("chat-messages-container");
