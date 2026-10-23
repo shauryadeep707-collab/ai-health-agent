@@ -1,35 +1,64 @@
 /* =============================================================================
-   AI HEALTH AGENT — DASHBOARD DESIGN (dashboard.css)
+   AI HEALTH AGENT — DASHBOARD DESIGN SYSTEM (dashboard.css)
+   Clean, modern, clinical SaaS aesthetics for Doctor & Patient Portals
    ============================================================================= */
 
 .dashboard-layout {
   display: flex;
-  min-height: calc(100vh - 4.25rem - 60px);
+  min-height: calc(100vh - 4.5rem - 45px);
+  background-color: #f8fafc;
 }
 
-/* Dashboard Sidebar */
+/* =============================================================================
+   SIDEBAR NAVIGATION
+   ============================================================================= */
 .dashboard-sidebar {
-  width: 260px;
+  width: 270px;
   background-color: var(--white);
   border-right: 1px solid var(--slate-200);
-  padding: 1.5rem 0.75rem;
+  padding: 1.75rem 1rem;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  box-shadow: var(--shadow-xs);
 }
 .sidebar-user {
-  padding: 0 0.75rem 1.25rem;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid var(--slate-200);
+  padding: 0 0.5rem 1.25rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--slate-100);
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+.sidebar-user-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-md);
+  background: var(--primary-light);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+.sidebar-user-info {
+  flex-grow: 1;
+  overflow: hidden;
 }
 .sidebar-user-name {
+  font-family: var(--font-heading);
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.975rem;
   color: var(--dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sidebar-user-role {
-  font-size: 0.8rem;
-  color: var(--slate-400);
+  font-size: 0.785rem;
+  font-weight: 600;
+  color: var(--slate-500);
   margin-top: 0.15rem;
   display: flex;
   align-items: center;
@@ -46,10 +75,10 @@
 .sidebar-link {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.7rem 0.85rem;
+  gap: 0.85rem;
+  padding: 0.75rem 1rem;
   color: var(--slate-600);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font-size: 0.925rem;
   font-weight: 500;
   cursor: pointer;
@@ -60,23 +89,27 @@
   background-color: var(--slate-100);
   color: var(--primary);
   text-decoration: none;
+  transform: translateX(3px);
 }
 .sidebar-link.active {
-  background-color: var(--primary-light);
+  background: #e0f2fe;
   color: var(--primary);
-  font-weight: 600;
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 .sidebar-icon {
-  font-size: 1.2rem;
-  width: 1.5rem;
+  font-size: 1.25rem;
+  width: 1.6rem;
   text-align: center;
 }
 
-/* Main Dashboard Content Area */
+/* =============================================================================
+   MAIN CONTENT AREA
+   ============================================================================= */
 .dashboard-main {
   flex-grow: 1;
-  padding: 2rem 2.25rem;
-  background-color: var(--slate-50);
+  padding: 2.25rem 2.75rem;
+  background-color: #f8fafc;
   overflow-y: auto;
 }
 .dashboard-header {
@@ -85,17 +118,18 @@
   justify-content: space-between;
   margin-bottom: 2rem;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 .dashboard-title {
-  font-size: 1.75rem;
+  font-size: 1.85rem;
   font-weight: 800;
   color: var(--dark);
+  letter-spacing: -0.02em;
 }
 .dashboard-subtitle {
-  color: var(--slate-600);
+  color: var(--slate-500);
   font-size: 0.95rem;
-  margin-top: 0.2rem;
+  margin-top: 0.25rem;
 }
 
 /* Dashboard Tabs */
@@ -104,170 +138,221 @@
 }
 .dashboard-tab-content.active {
   display: block;
-  animation: fadeIn 0.25s ease-in;
+  animation: tabFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Stat Cards */
+/* =============================================================================
+   STAT CARDS
+   ============================================================================= */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1.35rem;
+  margin-bottom: 2.25rem;
 }
 .stat-card {
   background: var(--white);
-  padding: 1.35rem 1.5rem;
-  border-radius: var(--radius-md);
+  padding: 1.5rem 1.6rem;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--slate-200);
   box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: #cbd5e1;
 }
 .stat-label {
-  font-size: 0.825rem;
-  color: var(--slate-400);
-  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--slate-500);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 0.25rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.35rem;
 }
 .stat-value {
-  font-size: 1.75rem;
+  font-family: var(--font-heading);
+  font-size: 2rem;
   font-weight: 800;
   color: var(--dark);
+  line-height: 1.1;
 }
 .stat-icon {
-  width: 3rem;
-  height: 3rem;
+  width: 3.25rem;
+  height: 3.25rem;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
+  box-shadow: var(--shadow-xs);
 }
 
-/* Cards & Panels */
+/* =============================================================================
+   PANELS & CONTAINERS
+   ============================================================================= */
 .panel {
   background: var(--white);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--slate-200);
   box-shadow: var(--shadow-sm);
-  padding: 1.75rem;
-  margin-bottom: 1.75rem;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  transition: var(--transition);
 }
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
   border-bottom: 1px solid var(--slate-100);
-  padding-bottom: 0.85rem;
+  padding-bottom: 1rem;
 }
 .panel-title {
-  font-size: 1.2rem;
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--dark);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
 }
 
-/* Tables */
+/* =============================================================================
+   TABLES (Lab Reports & Appointments)
+   ============================================================================= */
 .table-responsive {
   width: 100%;
   overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--slate-200);
 }
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   text-align: left;
-  font-size: 0.9rem;
+  font-size: 0.925rem;
 }
 .data-table th {
-  background-color: var(--slate-100);
+  background-color: #f8fafc;
   color: var(--slate-700);
-  padding: 0.75rem 1rem;
-  font-weight: 600;
+  padding: 0.9rem 1.15rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   border-bottom: 1px solid var(--slate-200);
 }
 .data-table td {
-  padding: 0.85rem 1rem;
+  padding: 1rem 1.15rem;
   border-bottom: 1px solid var(--slate-100);
   vertical-align: middle;
+  color: var(--slate-700);
 }
-.data-table tr:hover {
-  background-color: var(--slate-50);
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+.data-table tr:hover td {
+  background-color: #f1f5f9;
 }
 
-/* Verification Banner on Doctor Dashboard */
+/* =============================================================================
+   DOCTOR VERIFICATION BANNER (DigiLocker Showcase)
+   ============================================================================= */
 .doc-verify-banner {
-  padding: 1.5rem 1.75rem;
-  border-radius: var(--radius-md);
-  margin-bottom: 2rem;
+  padding: 1.75rem 2rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 2.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 1.75rem;
   flex-wrap: wrap;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
 }
 .banner-verified {
-  background-color: var(--success-light);
-  border: 1px solid #86efac;
-  color: #166534;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1.5px solid #6ee7b7;
+  color: #065f46;
 }
 .banner-pending {
-  background-color: var(--warning-light);
-  border: 1px solid #fde68a;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1.5px solid #fcd34d;
   color: #92400e;
 }
 .banner-review {
-  background-color: var(--info-light);
-  border: 1px solid #93c5fd;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1.5px solid #93c5fd;
   color: #1e40af;
 }
 .banner-rejected {
-  background-color: var(--danger-light);
-  border: 1px solid #fca5a5;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1.5px solid #fca5a5;
   color: #991b1b;
 }
 
-/* Chat Assistant Widget & Interface */
+/* =============================================================================
+   CHAT ASSISTANT UI
+   ============================================================================= */
 .chat-container {
   display: flex;
   flex-direction: column;
-  height: 600px;
+  height: 620px;
   background: var(--white);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--slate-200);
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 .chat-header {
-  padding: 1rem 1.25rem;
+  padding: 1.15rem 1.5rem;
   background-color: var(--white);
   border-bottom: 1px solid var(--slate-200);
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
+.chat-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--dark);
+}
 .chat-messages {
   flex-grow: 1;
-  padding: 1.5rem;
+  padding: 1.75rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  background-color: #fafbfc;
+  gap: 1.35rem;
+  background-color: #f8fafc;
 }
 .chat-msg {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.85rem;
   max-width: 82%;
+  animation: msgSlideIn 0.25s ease-out;
+}
+@keyframes msgSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .chat-msg.patient {
   align-self: flex-end;
@@ -277,155 +362,177 @@
   align-self: flex-start;
 }
 .chat-avatar {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.4rem;
+  height: 2.4rem;
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   flex-shrink: 0;
+  box-shadow: var(--shadow-xs);
 }
-.avatar-ai { background-color: var(--primary); color: var(--white); }
-.avatar-patient { background-color: var(--secondary); color: var(--white); }
-.avatar-doctor { background-color: #7c3aed; color: var(--white); }
+.avatar-ai { background: var(--primary-gradient); color: var(--white); }
+.avatar-patient { background: var(--secondary-gradient); color: var(--white); }
+.avatar-doctor { background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); color: var(--white); }
 
 .chat-bubble {
-  padding: 0.9rem 1.15rem;
-  border-radius: var(--radius-md);
-  font-size: 0.925rem;
-  line-height: 1.55;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-lg);
+  font-size: 0.95rem;
+  line-height: 1.6;
   box-shadow: var(--shadow-sm);
+  position: relative;
 }
 .patient .chat-bubble {
-  background-color: var(--primary);
+  background: var(--primary-gradient);
   color: var(--white);
-  border-bottom-right-radius: 2px;
+  border-bottom-right-radius: 4px;
 }
 .ai .chat-bubble {
   background-color: var(--white);
   border: 1px solid var(--slate-200);
-  color: var(--dark);
-  border-bottom-left-radius: 2px;
+  color: var(--slate-800);
+  border-bottom-left-radius: 4px;
 }
 .doctor .chat-bubble {
   background-color: #f5f3ff;
   border: 1px solid #ddd6fe;
   color: #4c1d95;
+  border-bottom-left-radius: 4px;
 }
 .chat-disclaimer {
-  font-size: 0.75rem;
+  font-size: 0.775rem;
   color: var(--slate-400);
-  margin-top: 0.4rem;
+  margin-top: 0.6rem;
   border-top: 1px solid var(--slate-100);
-  padding-top: 0.35rem;
+  padding-top: 0.45rem;
   font-style: italic;
 }
 
 .chat-quick-chips {
-  padding: 0.6rem 1.25rem;
+  padding: 0.75rem 1.5rem;
   background: var(--white);
   border-top: 1px solid var(--slate-100);
   display: flex;
-  gap: 0.5rem;
+  gap: 0.6rem;
   overflow-x: auto;
 }
 .quick-chip {
-  padding: 0.3rem 0.75rem;
-  background-color: var(--slate-100);
+  padding: 0.35rem 0.85rem;
+  background-color: var(--slate-50);
   border: 1px solid var(--slate-200);
   border-radius: var(--radius-full);
-  font-size: 0.8rem;
+  font-size: 0.825rem;
+  font-weight: 500;
   color: var(--slate-600);
   cursor: pointer;
   white-space: nowrap;
   transition: var(--transition);
 }
 .quick-chip:hover {
-  background-color: var(--primary-light);
-  border-color: var(--primary);
+  background-color: #e0f2fe;
+  border-color: #bae6fd;
   color: var(--primary);
+  transform: translateY(-1px);
 }
 
 .chat-input-bar {
-  padding: 1rem 1.25rem;
+  padding: 1.15rem 1.5rem;
   background-color: var(--white);
   border-top: 1px solid var(--slate-200);
   display: flex;
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 .chat-input {
   flex-grow: 1;
-  padding: 0.65rem 1rem;
-  border: 1px solid var(--slate-200);
-  border-radius: var(--radius-sm);
+  padding: 0.75rem 1.15rem;
+  border: 1px solid var(--slate-300);
+  border-radius: var(--radius-md);
   outline: none;
   font-family: inherit;
   font-size: 0.95rem;
+  transition: var(--transition);
 }
 .chat-input:focus {
   border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 
-/* Modals */
+/* =============================================================================
+   MODAL WINDOWS
+   ============================================================================= */
 .modal-overlay {
   display: none;
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
+  background-color: rgba(9, 13, 22, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   z-index: 1000;
   align-items: center;
   justify-content: center;
-  padding: 1.25rem;
+  padding: 1.5rem;
 }
 .modal-overlay.active {
   display: flex;
+  animation: modalFade 0.2s ease-out;
+}
+@keyframes modalFade {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
 }
 .modal-card {
   background: var(--white);
-  border-radius: var(--radius-lg);
-  max-width: 550px;
+  border-radius: var(--radius-xl);
+  max-width: 580px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--slate-200);
 }
 .modal-header {
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--slate-200);
+  padding: 1.35rem 1.75rem;
+  border-bottom: 1px solid var(--slate-100);
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 .modal-title {
-  font-size: 1.2rem;
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--dark);
 }
 .modal-close {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   color: var(--slate-400);
   cursor: pointer;
+  transition: var(--transition);
+}
+.modal-close:hover {
+  color: var(--dark);
+  transform: rotate(90deg);
 }
 .modal-body {
-  padding: 1.5rem;
+  padding: 1.75rem;
 }
 .modal-footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--slate-200);
+  padding: 1.15rem 1.75rem;
+  border-top: 1px solid var(--slate-100);
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 
-/* Responsive Dashboard */
+/* Responsive Dashboard Layout */
 @media (max-width: 900px) {
   .dashboard-layout { flex-direction: column; }
   .dashboard-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--slate-200); }
   .sidebar-nav { flex-direction: row; overflow-x: auto; padding-bottom: 0.5rem; }
-  .dashboard-main { padding: 1.5rem 1rem; }
+  .dashboard-main { padding: 1.75rem 1.25rem; }
 }
