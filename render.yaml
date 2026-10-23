@@ -2,7 +2,7 @@ services:
   - type: web
     name: ai-health-agent
     env: python
-    buildCommand: pip install -r backend/requirements.txt
+    buildCommand: pip install -r requirements.txt
     startCommand: gunicorn backend.app:app
     envVars:
       - key: PYTHON_VERSION
