@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Health Agent — Smart Healthcare & Doctor Consultations</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
   <style>
     /* Clean, Normal Hero & Services layout */
     .hero-normal {
@@ -224,23 +225,74 @@
     </div>
   </section>
 
-  <!-- Services Grid -->
+  <!-- Services Grid & Embedded AI Chat -->
   <section class="services-overview container">
-    <div style="text-align: center; max-width: 600px; margin: 0 auto;">
-      <h2 style="font-size: 2rem; margin-bottom: 0.5rem;">How Can We Help You Today?</h2>
-      <p style="color: var(--slate-600);">Simple, safe, and reliable healthcare tools designed for everyday use.</p>
+    <div style="text-align: center; max-width: 650px; margin: 0 auto 2rem;">
+      <span class="status-pill verified" style="margin-bottom:0.6rem;">🤖 Online Clinical Triage</span>
+      <h2 style="font-size: 2.1rem; margin-bottom: 0.5rem;">AI Health Assistant</h2>
+      <p style="color: var(--slate-600);">Check symptoms step-by-step with clinical safety screening. Ask a question or pick an option below.</p>
     </div>
 
-    <div class="services-grid-normal">
-      <!-- 1: AI Chat -->
-      <div class="service-card-normal">
-        <div class="service-icon-box icon-teal">💬</div>
-        <h3>AI Health Assistant</h3>
-        <p>Ask health questions and get instant, safe guidance. Screens for emergency red flags before suggesting care steps.</p>
-        <a href="health-chat.html" class="btn btn-outline btn-sm">Consult Assistant →</a>
+    <!-- Live Embedded AI Chat Window -->
+    <div class="chat-container" id="chat-container-card" style="max-width: 880px; margin: 0 auto 3rem; box-shadow: var(--shadow-lg); border-radius: var(--radius-xl); height: 500px;">
+      <div class="chat-header">
+        <div style="display:flex; align-items:center; gap:0.65rem;">
+          <span class="pulse-indicator green"></span>
+          <strong style="color: var(--dark);">AI Health Assistant</strong>
+          <span class="status-pill verified" style="font-size:0.75rem;">Interactive Doctor Triage</span>
+        </div>
+        <div>
+          <button onclick="HealthChat.sendMessage('Clear and restart session')" class="btn btn-outline btn-sm">
+            🔄 New Check
+          </button>
+        </div>
       </div>
 
-      <!-- 2: Report Analysis -->
+      <div class="chat-messages" id="chat-messages-container" style="height: 320px;">
+        <div class="chat-msg ai">
+          <div class="chat-avatar avatar-ai">AI</div>
+          <div class="chat-bubble">
+            <div>
+              👋 <strong>Hello! I am your AI Health Assistant.</strong><br><br>
+              What symptoms or health concerns are you experiencing today? You can select a common symptom below or describe how you feel in the box.
+            </div>
+            <div class="chat-disclaimer">
+              ℹ️ Educational triage only. In case of severe chest pain or breathing difficulty, call 112 / 911 immediately.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Symptom Chips -->
+      <div class="chat-quick-chips" id="chat-quick-chips-bar">
+        <button onclick="HealthChat.sendMessage('I have had a throbbing headache and light sensitivity for 6 hours.')" class="quick-chip">
+          💬 Throbbing Headache & Sensitivity
+        </button>
+        <button onclick="HealthChat.sendMessage('I have a persistent sore throat and mild fever.')" class="quick-chip">
+          💬 Sore Throat & Mild Fever
+        </button>
+        <button onclick="HealthChat.sendMessage('I have stomach acidity and bloating after meals.')" class="quick-chip">
+          💬 Stomach Acidity & Bloating
+        </button>
+        <button onclick="HealthChat.sendMessage('I am feeling muscle soreness and body fatigue.')" class="quick-chip">
+          💬 Muscle Soreness & Fatigue
+        </button>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="chat-input-bar">
+        <input type="text" id="chat-user-input" class="chat-input" placeholder="Describe your symptoms (e.g. fever, headache, acidity, pain)...">
+        <button onclick="HealthChat.sendMessage()" class="btn btn-primary">Send</button>
+      </div>
+    </div>
+
+    <!-- More Healthcare Tools Grid -->
+    <div style="text-align: center; max-width: 600px; margin: 0 auto 1.5rem;">
+      <h3 style="font-size: 1.6rem; color: var(--dark);">Additional Healthcare Services</h3>
+    </div>
+
+    <div class="services-grid-normal" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+      <!-- Report Analysis -->
       <div class="service-card-normal">
         <div class="service-icon-box icon-blue">🔬</div>
         <h3>Lab Report Analysis</h3>
@@ -248,7 +300,7 @@
         <a href="report-analysis.html" class="btn btn-outline btn-sm">Analyze Report →</a>
       </div>
 
-      <!-- 3: Find Doctors -->
+      <!-- Find Doctors -->
       <div class="service-card-normal">
         <div class="service-icon-box icon-amber">🩺</div>
         <h3>Verified Doctors</h3>
@@ -256,7 +308,7 @@
         <a href="doctor-search.html" class="btn btn-outline btn-sm">Find Doctors →</a>
       </div>
 
-      <!-- 4: Medicines -->
+      <!-- Medicines -->
       <div class="service-card-normal">
         <div class="service-icon-box icon-purple">💊</div>
         <h3>Medicines & Safety</h3>
@@ -358,5 +410,11 @@
   </footer>
 
   <script src="js/auth.js"></script>
+  <script src="js/health-chat.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      HealthChat.initChat();
+    });
+  </script>
 </body>
 </html>

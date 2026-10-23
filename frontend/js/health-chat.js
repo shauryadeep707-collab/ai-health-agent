@@ -4,6 +4,7 @@
 
 const HealthChat = {
   currentConsultationId: null,
+  historyMemory: [],
 
   initChat() {
     const input = document.getElementById("chat-user-input");
@@ -29,13 +30,25 @@ const HealthChat = {
     const typingId = this.showTypingIndicator();
 
     try {
-      const res = await Auth.fetchWithAuth("/api/ai/chat", {
-        method: "POST",
-        body: JSON.stringify({
-          message: text,
-          consultation_id: this.currentConsultationId
-        })
-      });
+      let res;
+      const payload = {
+        message: text,
+        consultation_id: this.currentConsultationId,
+        history: this.historyMemory
+      };
+
+      if (typeof Auth !== "undefined" && Auth.isLoggedIn && Auth.isLoggedIn()) {
+        res = await Auth.fetchWithAuth("/api/ai/chat", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+      } else {
+        res = await fetch("/api/ai/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      }
 
       this.removeTypingIndicator(typingId);
 
@@ -44,6 +57,11 @@ const HealthChat = {
 
       if (data.success) {
         this.currentConsultationId = data.consultation_id;
+        
+        // Record in client history for step-by-step turns
+        this.historyMemory.push({ sender_type: "PATIENT", message_text: text });
+        this.historyMemory.push({ sender_type: "AI_ASSISTANT", message_text: data.response });
+
         this.appendMessage("ai", data.response, data.disclaimer);
 
         if (data.red_flag_alert) {
@@ -54,15 +72,19 @@ const HealthChat = {
           this.renderFollowUpChips(data.follow_up_questions);
         }
 
-        // Show share with doctor button
+        // Show share with doctor button only if logged in
         const shareBtn = document.getElementById("share-consultation-btn");
-        if (shareBtn) shareBtn.style.display = "inline-flex";
+        if (shareBtn && typeof Auth !== "undefined" && Auth.isLoggedIn && Auth.isLoggedIn()) {
+          shareBtn.style.display = "inline-flex";
+        }
       } else {
         this.appendMessage("ai", "I apologize, but I could not process your query at this moment: " + (data.error || "Please try again."));
       }
     } catch (err) {
       this.removeTypingIndicator(typingId);
       this.appendMessage("ai", "Network connection error. Please ensure the backend server is running.");
+    }
+  },
     }
   },
 
