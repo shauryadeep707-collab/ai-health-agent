@@ -53,15 +53,13 @@ def initiate_digilocker_flow():
 def sandbox_authorization_page():
     """
     Sandbox / Development gateway simulating DigiLocker authorization screen.
-    Redirects back to callback with an authorization code and state.
+    Opens the interactive DigiLocker consent gateway screen.
     """
     state = request.args.get("state")
     doctor_id = request.args.get("doctor_id")
 
-    # In sandbox mode, immediately redirect to callback with a mock authorization code
-    # or return an interactive confirmation payload
-    callback_url = f"/api/doctor/digilocker/callback?code=DL_AUTH_CODE_{doctor_id}&state={state}"
-    return redirect(callback_url)
+    # Render official DigiLocker consent screen
+    return redirect(f"/digilocker-auth.html?state={state}&doctor_id={doctor_id}")
 
 @doctor_bp.route("/digilocker/callback", methods=["GET"])
 def digilocker_callback():
@@ -76,6 +74,7 @@ def digilocker_callback():
     code = request.args.get("code")
     state = request.args.get("state")
     error = request.args.get("error")
+    scenario = request.args.get("scenario", "MATCH")
 
     if error:
         return redirect(f"/doctor-dashboard.html?verification_status=REJECTED&error={error}")
@@ -98,7 +97,7 @@ def digilocker_callback():
     doc_payload = None
     if state_data.get("is_demo") or "DL_AUTH_CODE_" in (code or ""):
         # Sandbox simulated document payload
-        doc_payload = DigiLockerService.get_sandbox_credential_payload(doctor, scenario="MATCH")
+        doc_payload = DigiLockerService.get_sandbox_credential_payload(doctor, scenario=scenario)
     else:
         # Production Live DigiLocker token exchange and document retrieval
         success, token_data, err_msg = DigiLockerService.exchange_code_for_token(code)
