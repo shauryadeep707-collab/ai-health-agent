@@ -135,13 +135,19 @@ const HealthChat = {
 
   renderFollowUpChips(questions) {
     const chipsContainer = document.getElementById("chat-quick-chips-bar");
-    if (!chipsContainer) return;
+    if (!chipsContainer || !questions || questions.length === 0) return;
 
-    chipsContainer.innerHTML = questions.map(q => `
-      <button onclick="HealthChat.sendMessage('${q.replace(/'/g, "\\'")}')" class="quick-chip">
-        💬 ${q}
-      </button>
-    `).join("");
+    chipsContainer.innerHTML = questions.map(q => {
+      const cleanQ = q.replace(/'/g, "\\'");
+      const lowerQ = q.toLowerCase();
+      if (lowerQ.includes("find") && lowerQ.includes("doctor")) {
+        return `<a href="doctor-search.html" class="quick-chip" style="background:#e0f2fe; color:#0284c7; font-weight:700;">🩺 ${q}</a>`;
+      }
+      if (lowerQ.includes("medicine database")) {
+        return `<a href="medicine-search.html" class="quick-chip" style="background:#f3e8ff; color:#7c3aed; font-weight:700;">💊 ${q}</a>`;
+      }
+      return `<button onclick="HealthChat.sendMessage('${cleanQ}')" class="quick-chip">👉 ${q}</button>`;
+    }).join("");
   },
 
   async openShareModal() {
