@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Medical Report Analysis — AI Health Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/forms.css">
+</head>
+<body>
+
+  <!-- Emergency Banner -->
+  <div class="emergency-banner">
+    ⚠️ For acute emergencies, dial 112 / 911 immediately. Lab analyses are non-diagnostic educational tools.
+  </div>
+
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="index.html" class="brand-logo">
+        <div class="logo-icon">⚕</div>
+        <span>AI Health Agent</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-link">Home</a></li>
+          <li><a href="health-chat.html" class="nav-link">AI Health Chat</a></li>
+          <li><a href="report-analysis.html" class="nav-link active">Report Analysis</a></li>
+          <li><a href="doctor-search.html" class="nav-link">Find Doctors</a></li>
+          <li><a href="medicine-search.html" class="nav-link">Medicines</a></li>
+        </ul>
+      </nav>
+      <div class="nav-actions" id="nav-actions">
+        <a href="patient-login.html" class="btn btn-outline btn-sm">Patient Login</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" style="padding: 2.5rem 1.25rem;">
+    <div style="text-align:center; max-width:700px; margin:0 auto 2.5rem;">
+      <h1 style="font-size:2.25rem; font-weight:800; color:var(--dark); margin-bottom:0.75rem;">
+        Intelligent Medical Report Analysis
+      </h1>
+      <p style="color:var(--slate-600); font-size:1.05rem;">
+        Upload diagnostic blood chemistry or pathology reports in PDF, PNG, or JPG. Our AI extracts lab parameters, highlights out-of-range metrics, and translates findings into plain English.
+      </p>
+    </div>
+
+    <!-- Upload Box -->
+    <div class="panel" style="max-width:800px; margin:0 auto 2rem;">
+      <div class="panel-header">
+        <h3 class="panel-title">📤 Upload Medical Report</h3>
+        <span style="font-size:0.85rem; color:var(--slate-400);">Max 10MB | PDF, JPG, PNG</span>
+      </div>
+
+      <form id="standalone-upload-form" onsubmit="ReportUpload.submitUpload(event)">
+        <div class="dropzone" id="report-dropzone">
+          <div class="dropzone-icon">🔬</div>
+          <div class="dropzone-title">Click to upload report or drag and drop</div>
+          <div class="dropzone-desc">Complete Blood Count, Lipid Profile, Thyroid, or Liver Function</div>
+          <input type="file" id="report-file-input" accept=".pdf,.png,.jpg,.jpeg">
+        </div>
+
+        <div id="file-selected-preview"></div>
+
+        <div class="form-row" style="margin-top:1.25rem;">
+          <div class="form-group">
+            <label class="form-label" for="report-test-type">Test Category</label>
+            <select id="report-test-type" class="form-control">
+              <option value="Comprehensive Lipid Profile">Comprehensive Lipid Profile</option>
+              <option value="Complete Blood Count (CBC)">Complete Blood Count (CBC)</option>
+              <option value="Liver Function Test (LFT)">Liver Function Test (LFT)</option>
+              <option value="Thyroid Stimulating Hormone (TSH)">Thyroid Panel</option>
+              <option value="General Diagnostic Lab Report">General Diagnostic Lab Report</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="report-test-date">Report Date</label>
+            <input type="date" id="report-test-date" class="form-control">
+          </div>
+        </div>
+
+        <button type="submit" id="upload-submit-btn" class="btn btn-primary btn-block btn-lg" style="margin-top:0.75rem;">
+          Extract & Analyze with AI
+        </button>
+      </form>
+    </div>
+
+    <!-- Results Container -->
+    <div id="analysis-result-container" style="max-width:800px; margin:0 auto;"></div>
+
+    <!-- Historical Trends -->
+    <div class="panel" style="max-width:800px; margin:2rem auto 0;">
+      <div class="panel-header">
+        <h3 class="panel-title">📈 Longitudinal Parameter Comparison</h3>
+      </div>
+      <p style="font-size:0.9rem; color:var(--slate-600); margin-bottom:1rem;">
+        Track how your laboratory values change over time when standard test units match:
+      </p>
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+        <input type="text" id="compare-param-input" class="form-control" placeholder="Enter parameter name (e.g. Total Cholesterol)" style="flex:1;">
+        <button onclick="ReportUpload.compareParameter()" class="btn btn-secondary">Compare Trend</button>
+      </div>
+      <div id="comparison-results"></div>
+    </div>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script src="js/report-upload.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      ReportUpload.initDropzone("report-dropzone", "report-file-input");
+      if (Auth.isAuthenticated()) {
+        ReportUpload.loadHistory();
+      }
+    });
+  </script>
+</body>
+</html>

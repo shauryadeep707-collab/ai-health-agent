@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Dashboard — AI Health Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/forms.css">
+</head>
+<body>
+
+  <!-- Top Emergency Warning -->
+  <div class="emergency-banner">
+    ⚠️ For medical emergencies (severe chest pain, difficulty breathing, stroke symptoms), call 112 / 911 immediately.
+  </div>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="index.html" class="brand-logo">
+        <div class="logo-icon">⚕</div>
+        <span>AI Health Agent</span>
+      </a>
+      <div class="nav-actions" id="nav-actions">
+        <!-- Rendered by auth.js -->
+      </div>
+    </div>
+  </header>
+
+  <div class="dashboard-layout">
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="sidebar-patient-name">Patient Portal</div>
+        <div class="sidebar-user-role">
+          <span>●</span> Active Patient Account
+        </div>
+      </div>
+
+      <ul class="sidebar-nav">
+        <li>
+          <a class="sidebar-link active" onclick="switchTab('overview')">
+            <span class="sidebar-icon">📊</span> Overview
+          </a>
+        </li>
+        <li>
+          <a class="sidebar-link" onclick="switchTab('ai-assistant')">
+            <span class="sidebar-icon">💬</span> AI Health Assistant
+          </a>
+        </li>
+        <li>
+          <a class="sidebar-link" onclick="switchTab('reports')">
+            <span class="sidebar-icon">🔬</span> Medical Reports
+          </a>
+        </li>
+        <li>
+          <a class="sidebar-link" onclick="switchTab('doctors')">
+            <span class="sidebar-icon">🩺</span> Find Doctors
+          </a>
+        </li>
+        <li>
+          <a class="sidebar-link" onclick="switchTab('appointments')">
+            <span class="sidebar-icon">📅</span> My Appointments
+          </a>
+        </li>
+        <li>
+          <a class="sidebar-link" onclick="switchTab('medicines')">
+            <span class="sidebar-icon">💊</span> Medicines & Safety
+          </a>
+        </li>
+        <li>
+          <a class="sidebar-link" onclick="switchTab('products')">
+            <span class="sidebar-icon">🛍️</span> Health Products
+          </a>
+        </li>
+        <li>
+          <a class="sidebar-link" onclick="switchTab('profile')">
+            <span class="sidebar-icon">⚙️</span> Profile & Consents
+          </a>
+        </li>
+      </ul>
+
+      <div style="padding: 1rem 0.75rem; border-top:1px solid var(--slate-200);">
+        <button onclick="Auth.logout()" class="btn btn-outline btn-sm btn-block">
+          Log Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="dashboard-main">
+
+      <!-- =====================================================================
+           TAB 1: OVERVIEW
+           ===================================================================== -->
+      <section id="tab-overview" class="dashboard-tab-content active">
+        <div class="dashboard-header">
+          <div>
+            <h1 class="dashboard-title">Welcome Back, <span id="welcome-patient-name">Patient</span></h1>
+            <p class="dashboard-subtitle">Manage your health records, view AI report breakdowns, and schedule care.</p>
+          </div>
+          <button onclick="switchTab('reports')" class="btn btn-primary">
+            + Upload Medical Report
+          </button>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div>
+              <div class="stat-label">Uploaded Reports</div>
+              <div class="stat-value" id="stat-reports-count">0</div>
+            </div>
+            <div class="stat-icon icon-blue">🔬</div>
+          </div>
+          <div class="stat-card">
+            <div>
+              <div class="stat-label">Active Appointments</div>
+              <div class="stat-value" id="stat-apts-count">0</div>
+            </div>
+            <div class="stat-icon icon-teal">📅</div>
+          </div>
+          <div class="stat-card">
+            <div>
+              <div class="stat-label">AI Consultations</div>
+              <div class="stat-value" id="stat-cons-count">0</div>
+            </div>
+            <div class="stat-icon icon-amber">💬</div>
+          </div>
+          <div class="stat-card">
+            <div>
+              <div class="stat-label">Consent Status</div>
+              <div class="stat-value" style="font-size:1.15rem; color:var(--success);">Active ✓</div>
+            </div>
+            <div class="stat-icon" style="background-color:var(--success-light); color:var(--success);">🔒</div>
+          </div>
+        </div>
+
+        <!-- Quick AI Consultation Banner -->
+        <div class="panel" style="background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%); border-color:#bbf7d0;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <div>
+              <h3 style="font-size:1.25rem; font-weight:700; color:var(--dark); margin-bottom:0.35rem;">
+                Feeling unwell or have questions about symptoms?
+              </h3>
+              <p style="font-size:0.95rem; color:var(--slate-600); max-width:650px;">
+                Our AI Health Assistant screens for urgent red flags, provides safe self-care guidance, and helps you determine if a doctor's visit is necessary.
+              </p>
+            </div>
+            <button onclick="switchTab('ai-assistant')" class="btn btn-primary">
+              Start AI Health Chat
+            </button>
+          </div>
+        </div>
+
+        <!-- Recent Reports Preview -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title">🔬 Recent Medical Reports</h3>
+            <button onclick="switchTab('reports')" class="btn btn-outline btn-sm">View All</button>
+          </div>
+          <div id="overview-reports-preview">
+            <p style="color:var(--slate-400); text-align:center; padding:1.5rem;">Loading recent lab reports...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           TAB 2: AI HEALTH ASSISTANT (CHAT)
+           ===================================================================== -->
+      <section id="tab-ai-assistant" class="dashboard-tab-content">
+        <div class="dashboard-header">
+          <div>
+            <h1 class="dashboard-title">Conversational AI Health Assistant</h1>
+            <p class="dashboard-subtitle">Safe, guided symptom triage with emergency red-flag screening</p>
+          </div>
+          <button id="share-consultation-btn" onclick="HealthChat.openShareModal()" class="btn btn-secondary btn-sm" style="display:none;">
+            📤 Share Chat with Verified Doctor
+          </button>
+        </div>
+
+        <div class="chat-container" id="chat-container-card">
+          <div class="chat-header">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span style="color:var(--success); font-size:1rem;">●</span>
+              <strong>AI Clinical Safety Assistant</strong>
+              <span class="badge badge-verified">Active</span>
+            </div>
+            <button onclick="HealthChat.sendMessage('Clear and restart our conversation')" class="btn btn-outline btn-sm">
+              New Session
+            </button>
+          </div>
+
+          <div class="chat-messages" id="chat-messages-container">
+            <div class="chat-msg ai">
+              <div class="chat-avatar avatar-ai">AI</div>
+              <div class="chat-bubble">
+                <div>
+                  Hello! I am your AI Health Assistant. How are you feeling today? You can describe any symptoms you are experiencing (such as cough, fever, stomach pain, or headache).<br><br>
+                  <strong>Safety First:</strong> If you are experiencing sudden severe chest pain, shortness of breath, slurred speech, or heavy bleeding, please call emergency services (112 / 911) right away.
+                </div>
+                <div class="chat-disclaimer">
+                  ℹ️ Medical Disclaimer: This AI assistant provides health guidance for educational purposes only. It is not a substitute for clinical diagnosis or in-person medical care.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Symptom Chips -->
+          <div class="chat-quick-chips" id="chat-quick-chips-bar">
+            <button onclick="HealthChat.sendMessage('I have had a dry cough and mild fever for 2 days.')" class="quick-chip">
+              💬 Cough & Mild Fever (2 days)
+            </button>
+            <button onclick="HealthChat.sendMessage('I am feeling persistent tension headache and fatigue.')" class="quick-chip">
+              💬 Tension Headache & Fatigue
+            </button>
+            <button onclick="HealthChat.sendMessage('I have stomach acidity and bloating after meals.')" class="quick-chip">
+              💬 Acidity & Bloating
+            </button>
+            <button onclick="HealthChat.sendMessage('What lifestyle changes can help lower LDL cholesterol?')" class="quick-chip">
+              💬 Lowering LDL Cholesterol
+            </button>
+          </div>
+
+          <!-- Input Bar -->
+          <div class="chat-input-bar">
+            <input type="text" id="chat-user-input" class="chat-input" placeholder="Type your health question or symptom description...">
+            <button onclick="HealthChat.sendMessage()" class="btn btn-primary">
+              Send
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           TAB 3: MEDICAL REPORTS (UPLOAD & ANALYSIS)
+           ===================================================================== -->
+      <section id="tab-reports" class="dashboard-tab-content">
+        <div class="dashboard-header">
+          <div>
+            <h1 class="dashboard-title">AI Medical Report Analysis</h1>
+            <p class="dashboard-subtitle">Extract parameters, compare reference ranges, and view plain English explanations</p>
+          </div>
+        </div>
+
+        <!-- Upload Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title">📤 Upload New Medical Report</h3>
+            <span style="font-size:0.85rem; color:var(--slate-400);">Accepted formats: PDF, PNG, JPG, JPEG (Max 10MB)</span>
+          </div>
+
+          <form id="report-upload-form" onsubmit="ReportUpload.submitUpload(event)">
+            <div class="dropzone" id="report-dropzone">
+              <div class="dropzone-icon">📁</div>
+              <div class="dropzone-title">Click to browse or drag and drop your report here</div>
+              <div class="dropzone-desc">Blood chemistry, lipid panel, metabolic profile, or general lab tests</div>
+              <input type="file" id="report-file-input" accept=".pdf,.png,.jpg,.jpeg">
+            </div>
+
+            <div id="file-selected-preview"></div>
+
+            <div class="form-row" style="margin-top:1.25rem;">
+              <div class="form-group">
+                <label class="form-label" for="report-test-type">Test Category</label>
+                <select id="report-test-type" class="form-control">
+                  <option value="Comprehensive Lipid Profile">Comprehensive Lipid Profile</option>
+                  <option value="Complete Blood Count (CBC)">Complete Blood Count (CBC)</option>
+                  <option value="Comprehensive Metabolic Panel (CMP)">Comprehensive Metabolic Panel</option>
+                  <option value="Liver Function Test (LFT)">Liver Function Test (LFT)</option>
+                  <option value="Thyroid Profile (TSH, T3, T4)">Thyroid Profile</option>
+                  <option value="HbA1c & Blood Glucose">HbA1c & Blood Glucose</option>
+                  <option value="General Diagnostic Lab Report">General Diagnostic Lab Report</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="report-test-date">Report Test Date</label>
+                <input type="date" id="report-test-date" class="form-control">
+              </div>
+            </div>
+
+            <button type="submit" id="upload-submit-btn" class="btn btn-primary btn-block btn-lg" style="margin-top:0.5rem;">
+              Extract & Analyze Report with AI
+            </button>
+          </form>
+        </div>
+
+        <!-- Dynamic Container for Active Upload Result -->
+        <div id="analysis-result-container"></div>
+
+        <!-- Historical Reports & Parameter Trend Tool -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title">📈 Parameter Trend Over Time</h3>
+          </div>
+          <div style="display:flex; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap;">
+            <input type="text" id="compare-param-input" class="form-control" placeholder="Enter parameter (e.g. Total Cholesterol, HbA1c, Hemoglobin)" style="max-width:380px;">
+            <button onclick="ReportUpload.compareParameter()" class="btn btn-secondary">
+              Compare Over Time
+            </button>
+          </div>
+          <div id="comparison-results"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title">📚 Your Report History</h3>
+          </div>
+          <div id="reports-history-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           TAB 4: FIND DOCTORS
+           ===================================================================== -->
+      <section id="tab-doctors" class="dashboard-tab-content">
+        <div class="dashboard-header">
+          <div>
+            <h1 class="dashboard-title">Find Verified Medical Practitioners</h1>
+            <p class="dashboard-subtitle">Consult doctors authenticated via official DigiLocker medical registration</p>
+          </div>
+        </div>
+
+        <div class="panel" style="background:#f8fafc;">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Search Doctor or Condition</label>
+              <input type="text" id="doc-search-query" class="form-control" placeholder="e.g. Dr. Priya, Cardiology, Hypertension">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Specialty</label>
+              <select id="doc-search-specialty" class="form-control">
+                <option value="">All Specialties</option>
+                <option value="Cardiology">Cardiology</option>
+                <option value="Endocrinology">Endocrinology</option>
+                <option value="General Medicine">General Medicine</option>
+                <option value="Pediatrics">Pediatrics</option>
+                <option value="Neurology">Neurology</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-size:0.85rem; color:var(--slate-600);">
+              🔒 Only genuine doctors verified through DigiLocker / Medical Council are bookable.
+            </div>
+            <button onclick="Appointments.searchDoctors()" class="btn btn-primary">
+              Filter Doctors
+            </button>
+          </div>
+        </div>
+
+        <div id="doctors-results-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1.5rem;">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           TAB 5: MY APPOINTMENTS
+           ===================================================================== -->
+      <section id="tab-appointments" class="dashboard-tab-content">
+        <div class="dashboard-header">
+          <div>
+            <h1 class="dashboard-title">My Appointments</h1>
+            <p class="dashboard-subtitle">Track consultation dates, statuses, and physician visit notes</p>
+          </div>
+          <button onclick="switchTab('doctors')" class="btn btn-primary btn-sm">
+            + Schedule New Appointment
+          </button>
+        </div>
+
+        <div class="panel">
+          <div id="my-appointments-container">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           TAB 6: MEDICINE INFORMATION
+           ===================================================================== -->
+      <section id="tab-medicines" class="dashboard-tab-content">
+        <div class="dashboard-header">
+          <div>
+            <h1 class="dashboard-title">Medicine Compendium & Interaction Checker</h1>
+            <p class="dashboard-subtitle">Authoritative pharmacological references (WHO & FDA), precautions, and pharmacy links</p>
+          </div>
+        </div>
+
+        <!-- Drug Interaction Tool -->
+        <div class="panel" style="border-left: 4px solid var(--warning);">
+          <div class="panel-header">
+            <h3 class="panel-title">⚠️ Pairwise Drug Interaction Checker</h3>
+          </div>
+          <p style="font-size:0.9rem; color:var(--slate-600); margin-bottom:1rem;">
+            Select two or more medications to screen for adverse interactions and clinical contraindications:
+          </p>
+          <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+            <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem;">
+              <input type="checkbox" name="interaction-med" value="med-001"> Paracetamol (Dolo 650)
+            </label>
+            <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem;">
+              <input type="checkbox" name="interaction-med" value="med-002"> Metformin (Glycomet)
+            </label>
+            <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem;">
+              <input type="checkbox" name="interaction-med" value="med-003"> Atorvastatin (Lipitor)
+            </label>
+            <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem;">
+              <input type="checkbox" name="interaction-med" value="med-004"> Amoxicillin + Clavulanate (Augmentin)
+            </label>
+            <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem;">
+              <input type="checkbox" name="interaction-med" value="med-005"> Omeprazole (Omez)
+            </label>
+          </div>
+          <button onclick="checkDrugInteractions()" class="btn btn-secondary btn-sm">
+            Check Interactions
+          </button>
+          <div id="interaction-results" style="margin-top:1rem;"></div>
+        </div>
+
+        <!-- Search Medicines -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title">🔍 Search Medicines</h3>
+          </div>
+          <div style="display:flex; gap:0.75rem; margin-bottom:1.5rem;">
+            <input type="text" id="med-search-input" class="form-control" placeholder="Search by brand name, generic name, or symptom (e.g. Paracetamol, Diabetes)...">
+            <button onclick="searchMedicines()" class="btn btn-primary">Search</button>
+          </div>
+          <div id="medicine-search-results"></div>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           TAB 7: HEALTH PRODUCTS
+           ===================================================================== -->
+      <section id="tab-products" class="dashboard-tab-content">
+        <div class="dashboard-header">
+          <div>
+            <h1 class="dashboard-title">Health Devices & Products Catalogue</h1>
+            <p class="dashboard-subtitle">Search diagnostic devices, monitors, and health products with real sellers</p>
+          </div>
+        </div>
+
+        <div class="panel" style="background:#f8fafc;">
+          <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+            <input type="text" id="prod-search-input" class="form-control" placeholder="Search devices (e.g. BP monitor, glucometer, pulse oximeter)..." style="flex:1;">
+            <select id="prod-cat-select" class="form-control" style="max-width:220px;">
+              <option value="">All Categories</option>
+            </select>
+            <button onclick="searchProducts()" class="btn btn-primary">Search</button>
+          </div>
+          <div id="prod-suggestion-box" style="margin-top:0.5rem; font-size:0.85rem;"></div>
+        </div>
+
+        <div id="products-catalog-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1.5rem;">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           TAB 8: PROFILE & CONSENTS
+           ===================================================================== -->
+      <section id="tab-profile" class="dashboard-tab-content">
+        <div class="dashboard-header">
+          <div>
+            <h1 class="dashboard-title">Patient Profile & Consent Settings</h1>
+            <p class="dashboard-subtitle">Manage medical demographic information and data privacy preferences</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <form id="profile-edit-form" onsubmit="savePatientProfile(event)">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="prof-fullname" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email Address (Read-Only)</label>
+                <input type="email" id="prof-email" class="form-control" disabled>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Phone Number</label>
+                <input type="tel" id="prof-phone" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Date of Birth</label>
+                <input type="date" id="prof-dob" class="form-control">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Gender</label>
+                <select id="prof-gender" class="form-control">
+                  <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Blood Group</label>
+                <select id="prof-blood" class="form-control">
+                  <option value="">Unknown</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Emergency Contact Information</label>
+              <input type="text" id="prof-emergency" class="form-control" placeholder="+919820099887 (Spouse / Guardian)">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Known Drug Allergies</label>
+              <input type="text" id="prof-allergies" class="form-control">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Chronic Conditions</label>
+              <input type="text" id="prof-chronic" class="form-control">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Profile Changes</button>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title">🔒 Active Consent Audits</h3>
+          </div>
+          <div id="consents-audit-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Modal: Book Appointment -->
+  <div class="modal-overlay" id="book-apt-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Book Doctor Appointment</h3>
+        <button onclick="Appointments.closeBookModal()" class="modal-close">&times;</button>
+      </div>
+      <form onsubmit="Appointments.submitBooking(event)">
+        <div class="modal-body">
+          <p style="margin-bottom:1rem; font-size:0.95rem;">
+            Consultation with: <strong id="modal-doc-name">Doctor</strong><br>
+            Estimated Consultation Fee: <strong id="modal-doc-fee">₹500</strong>
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">Select Date <span class="required">*</span></label>
+            <input type="date" id="apt-date" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Select Slot Time <span class="required">*</span></label>
+            <select id="apt-slot" class="form-control" required>
+              <option value="09:30 AM">09:30 AM</option>
+              <option value="11:00 AM">11:00 AM</option>
+              <option value="02:30 PM">02:30 PM</option>
+              <option value="04:00 PM">04:00 PM</option>
+              <option value="05:30 PM">05:30 PM</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Reason for Visit / Chief Symptoms</label>
+            <textarea id="apt-reason" class="form-control" placeholder="Describe your primary reason for consulting this physician..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" onclick="Appointments.closeBookModal()" class="btn btn-outline">Cancel</button>
+          <button type="submit" class="btn btn-primary">Confirm Appointment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Share Consultation with Doctor -->
+  <div class="modal-overlay" id="share-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Share Consultation with Doctor</h3>
+        <button onclick="HealthChat.closeShareModal()" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.9rem; color:var(--slate-600); margin-bottom:1.25rem;">
+          By sharing this AI consultation dialogue, you grant the selected verified doctor explicit authorization to review your reported symptoms and AI triage notes.
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">Select Verified Doctor</label>
+          <select id="share-doctor-select" class="form-control"></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="HealthChat.closeShareModal()" class="btn btn-outline">Cancel</button>
+        <button type="button" onclick="HealthChat.submitShareWithDoctor()" class="btn btn-primary">Authorize & Share</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/auth.js"></script>
+  <script src="js/report-upload.js"></script>
+  <script src="js/health-chat.js"></script>
+  <script src="js/appointments.js"></script>
+
+  <script>
+    function switchTab(tabName) {
+      document.querySelectorAll(".dashboard-tab-content").forEach(el => el.classList.remove("active"));
+      document.querySelectorAll(".sidebar-link").forEach(el => el.classList.remove("active"));
+
+      const target = document.getElementById(`tab-${tabName}`);
+      if (target) target.classList.add("active");
+
+      // Set sidebar active
+      event?.target?.closest(".sidebar-link")?.classList.add("active");
+
+      if (tabName === "reports") {
+        ReportUpload.loadHistory();
+      } else if (tabName === "doctors") {
+        Appointments.searchDoctors();
+      } else if (tabName === "appointments") {
+        Appointments.loadMyAppointments();
+      } else if (tabName === "medicines") {
+        searchMedicines();
+      } else if (tabName === "products") {
+        loadProductCategories();
+        searchProducts();
+      } else if (tabName === "profile") {
+        loadPatientProfile();
+      }
+    }
+
+    async function loadDashboardOverview() {
+      try {
+        const res = await Auth.fetchWithAuth("/api/patient/profile");
+        if (!res) return;
+        const data = await res.json();
+        if (data.success && data.patient) {
+          const name = data.patient.full_name || "Patient";
+          document.getElementById("sidebar-patient-name").innerText = name;
+          document.getElementById("welcome-patient-name").innerText = name;
+        }
+
+        // Load stats
+        const [repRes, aptRes] = await Promise.all([
+          Auth.fetchWithAuth("/api/patient/reports"),
+          Auth.fetchWithAuth("/api/appointments/my")
+        ]);
+
+        if (repRes) {
+          const repData = await repRes.json();
+          document.getElementById("stat-reports-count").innerText = repData.reports?.length || 0;
+          renderRecentReportsOverview(repData.reports || []);
+        }
+
+        if (aptRes) {
+          const aptData = await aptRes.json();
+          const activeApts = (aptData.appointments || []).filter(a => a.status === "BOOKED" || a.status === "CONFIRMED");
+          document.getElementById("stat-apts-count").innerText = activeApts.length;
+        }
+      } catch (err) {
+        console.error("Dashboard overview error:", err);
+      }
+    }
+
+    function renderRecentReportsOverview(reports) {
+      const container = document.getElementById("overview-reports-preview");
+      if (!container) return;
+      if (!reports.length) {
+        container.innerHTML = `<p style="color:var(--slate-400); text-align:center; padding:1.5rem;">No medical reports uploaded yet.</p>`;
+        return;
+      }
+      container.innerHTML = reports.slice(0, 3).map(r => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid var(--slate-100);">
+          <div>
+            <strong>${r.original_filename}</strong><br>
+            <small style="color:var(--slate-400);">${r.test_type || 'General'} | ${r.upload_timestamp.split('T')[0]}</small>
+          </div>
+          <span class="badge ${r.risk_level === 'LOW' ? 'badge-verified' : 'badge-rejected'}">${r.risk_level}</span>
+        </div>
+      `).join("");
+    }
+
+    async function searchMedicines() {
+      const q = document.getElementById("med-search-input")?.value || "";
+      const container = document.getElementById("medicine-search-results");
+      if (!container) return;
+      container.innerHTML = `<p style="color:var(--slate-400); text-align:center; padding:1rem;">Searching authoritative medicines...</p>`;
+
+      try {
+        const res = await fetch(`/api/medicines/search?query=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (data.success && data.medicines.length > 0) {
+          container.innerHTML = data.medicines.map(m => `
+            <div class="panel" style="margin-bottom:1rem; padding:1.25rem;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+                <div>
+                  <h4 style="font-size:1.1rem; font-weight:700; color:var(--dark);">${m.brand_name}</h4>
+                  <p style="font-size:0.875rem; color:var(--primary); font-weight:600;">Generic: ${m.generic_name}</p>
+                </div>
+                <span class="badge ${m.rx_required ? 'badge-pending' : 'badge-verified'}">
+                  ${m.rx_required ? 'Rx Prescription Required' : 'OTC / General'}
+                </span>
+              </div>
+              <p style="font-size:0.875rem; line-height:1.5; color:var(--slate-600); margin-bottom:0.5rem;">
+                <strong>Uses:</strong> ${m.common_uses}<br>
+                <strong>Precautions:</strong> ${m.safety_precautions}<br>
+                <strong>Contraindications:</strong> <span style="color:var(--danger);">${m.contraindications}</span>
+              </p>
+              <div style="font-size:0.8rem; color:var(--slate-400); margin-bottom:0.5rem;">
+                Source: ${m.trusted_source}
+              </div>
+              ${m.pharmacy_links && m.pharmacy_links.length > 0 ? `
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;">
+                  <span style="font-size:0.8rem; font-weight:600; color:var(--slate-600); align-self:center;">Buy from verified pharmacy:</span>
+                  ${m.pharmacy_links.map(l => `
+                    <a href="${l.url}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="font-size:0.75rem;">
+                      🛒 ${l.store} ↗
+                    </a>
+                  `).join("")}
+                </div>
+              ` : ''}
+            </div>
+          `).join("");
+        } else {
+          container.innerHTML = `<p style="color:var(--slate-400); text-align:center; padding:1rem;">No medicines found matching "${q}".</p>`;
+        }
+      } catch (e) {
+        container.innerHTML = `<p style="color:var(--danger);">Error searching medicines: ${e.message}</p>`;
+      }
+    }
+
+    async function checkDrugInteractions() {
+      const checked = Array.from(document.querySelectorAll('input[name="interaction-med"]:checked')).map(el => el.value);
+      const resContainer = document.getElementById("interaction-results");
+      if (!resContainer) return;
+
+      if (checked.length < 2) {
+        resContainer.innerHTML = `<div class="alert alert-warning">Please check at least 2 medications to screen for pairwise interactions.</div>`;
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/medicines/check-interactions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ medicine_ids: checked })
+        });
+        const data = await res.json();
+
+        if (data.success && data.has_interactions) {
+          resContainer.innerHTML = data.interactions.map(item => `
+            <div class="alert alert-danger" style="margin-bottom:0.75rem;">
+              <div>
+                <strong>⚠️ Interaction: ${item.med_a_name} + ${item.med_b_name} [Severity: ${item.severity}]</strong>
+                <p style="margin-top:0.25rem;">${item.interaction_desc}</p>
+                <p style="margin-top:0.25rem; font-style:italic;"><strong>Clinical Advice:</strong> ${item.clinical_advice}</p>
+              </div>
+            </div>
+          `).join("");
+        } else {
+          resContainer.innerHTML = `<div class="alert alert-success">✓ No known adverse pairwise interactions detected between the selected medications in our reference database.</div>`;
+        }
+      } catch (err) {
+        resContainer.innerHTML = `<div class="alert alert-danger">Interaction check failed: ${err.message}</div>`;
+      }
+    }
+
+    async function loadProductCategories() {
+      try {
+        const res = await fetch("/api/products/categories");
+        const data = await res.json();
+        const sel = document.getElementById("prod-cat-select");
+        if (sel && data.success) {
+          sel.innerHTML = `<option value="">All Categories</option>` + data.categories.map(c => `<option value="${c}">${c}</option>`).join("");
+        }
+      } catch (e) {}
+    }
+
+    async function searchProducts() {
+      const q = document.getElementById("prod-search-input")?.value || "";
+      const cat = document.getElementById("prod-cat-select")?.value || "";
+      const grid = document.getElementById("products-catalog-grid");
+      const sugBox = document.getElementById("prod-suggestion-box");
+      if (!grid) return;
+
+      grid.innerHTML = `<p style="color:var(--slate-400); text-align:center; padding:2rem; grid-column:1/-1;">Loading product catalog...</p>`;
+
+      try {
+        const params = new URLSearchParams({ query: q, category: cat });
+        const res = await fetch(`/api/products/search?${params}`);
+        const data = await res.json();
+
+        if (sugBox) {
+          if (data.spelling_suggestion) {
+            sugBox.innerHTML = `Did you mean: <a href="javascript:void(0)" onclick="document.getElementById('prod-search-input').value='${data.spelling_suggestion}'; searchProducts();"><strong>${data.spelling_suggestion}</strong></a>?`;
+          } else {
+            sugBox.innerHTML = "";
+          }
+        }
+
+        if (data.success && data.products.length > 0) {
+          grid.innerHTML = data.products.map(p => `
+            <div class="panel" style="display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+                  <span class="badge ${p.is_demo_data ? 'badge-demo' : 'badge-verified'}">
+                    ${p.is_demo_data ? 'Sample Demo Product' : 'Verified Listing'}
+                  </span>
+                  <span style="font-weight:700; color:var(--primary); font-size:1.15rem;">₹${p.price}</span>
+                </div>
+                <h4 style="font-size:1rem; font-weight:700; color:var(--dark); margin-bottom:0.35rem;">
+                  ${p.product_name}
+                </h4>
+                <p style="font-size:0.8rem; color:var(--slate-400); margin-bottom:0.5rem;">Category: ${p.category}</p>
+                <p style="font-size:0.85rem; color:var(--slate-600); line-height:1.4; margin-bottom:1rem;">
+                  ${p.description}
+                </p>
+              </div>
+              <div>
+                <a href="${p.product_url || '#'}" target="_blank" rel="noopener" class="btn btn-outline btn-block btn-sm">
+                  View on ${p.seller_name || 'Seller Site'} ↗
+                </a>
+              </div>
+            </div>
+          `).join("");
+        } else {
+          grid.innerHTML = `<p style="color:var(--slate-400); text-align:center; padding:2rem; grid-column:1/-1;">No products found.</p>`;
+        }
+      } catch (err) {
+        grid.innerHTML = `<p style="color:var(--danger); grid-column:1/-1;">Error loading products: ${err.message}</p>`;
+      }
+    }
+
+    async function loadPatientProfile() {
+      try {
+        const res = await Auth.fetchWithAuth("/api/auth/me");
+        if (!res) return;
+        const data = await res.json();
+        if (data.success && data.user) {
+          const u = data.user;
+          document.getElementById("prof-fullname").value = u.full_name || "";
+          document.getElementById("prof-email").value = u.email || "";
+          document.getElementById("prof-phone").value = u.phone_number || "";
+          document.getElementById("prof-dob").value = u.date_of_birth || "";
+          document.getElementById("prof-gender").value = u.gender || "PREFER_NOT_TO_SAY";
+          document.getElementById("prof-blood").value = u.blood_group || "";
+          document.getElementById("prof-emergency").value = u.emergency_contact || "";
+          document.getElementById("prof-allergies").value = u.allergies || "";
+          document.getElementById("prof-chronic").value = u.chronic_conditions || "";
+
+          // Render Consents
+          const consentsList = document.getElementById("consents-audit-list");
+          if (consentsList) {
+            consentsList.innerHTML = (u.consents || []).map(c => `
+              <div style="display:flex; justify-content:space-between; padding:0.6rem 0; border-bottom:1px solid var(--slate-100); font-size:0.85rem;">
+                <span><strong>${c.type}</strong></span>
+                <span style="color:var(--success);">Granted on ${c.granted_at} ✓</span>
+              </div>
+            `).join("");
+          }
+        }
+      } catch (e) {
+        console.error("Profile load error:", e);
+      }
+    }
+
+    async function savePatientProfile(e) {
+      e.preventDefault();
+      const payload = {
+        full_name: document.getElementById("prof-fullname").value.trim(),
+        phone_number: document.getElementById("prof-phone").value.trim(),
+        date_of_birth: document.getElementById("prof-dob").value || null,
+        gender: document.getElementById("prof-gender").value,
+        blood_group: document.getElementById("prof-blood").value || null,
+        emergency_contact: document.getElementById("prof-emergency").value.trim(),
+        allergies: document.getElementById("prof-allergies").value.trim(),
+        chronic_conditions: document.getElementById("prof-chronic").value.trim()
+      };
+
+      try {
+        const res = await Auth.fetchWithAuth("/api/patient/profile", {
+          method: "PUT",
+          body: JSON.stringify(payload)
+        });
+        if (!res) return;
+        const data = await res.json();
+        if (data.success) {
+          alert("Profile updated successfully!");
+          loadDashboardOverview();
+        }
+      } catch (err) {
+        alert("Error saving profile: " + err.message);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!Auth.guardPage("PATIENT")) return;
+      loadDashboardOverview();
+      ReportUpload.initDropzone("report-dropzone", "report-file-input");
+      HealthChat.initChat();
+
+      // Check URL params for direct tab navigation
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (tabParam) switchTab(tabParam);
+    });
+  </script>
+</body>
+</html>

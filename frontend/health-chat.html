@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conversational AI Health Assistant — AI Health Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/forms.css">
+</head>
+<body>
+
+  <!-- Emergency Banner -->
+  <div class="emergency-banner">
+    🚨 WARNING: If you are experiencing chest pain, stroke signs (slurred speech, drooping face), or difficulty breathing, call 112 / 911 immediately.
+  </div>
+
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="index.html" class="brand-logo">
+        <div class="logo-icon">⚕</div>
+        <span>AI Health Agent</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-link">Home</a></li>
+          <li><a href="health-chat.html" class="nav-link active">AI Health Chat</a></li>
+          <li><a href="report-analysis.html" class="nav-link">Report Analysis</a></li>
+          <li><a href="doctor-search.html" class="nav-link">Find Doctors</a></li>
+          <li><a href="medicine-search.html" class="nav-link">Medicines</a></li>
+        </ul>
+      </nav>
+      <div class="nav-actions" id="nav-actions">
+        <!-- Rendered by auth.js -->
+      </div>
+    </div>
+  </header>
+
+  <main class="container" style="padding: 2.5rem 1.25rem; max-width:960px;">
+    <div style="text-align:center; margin-bottom:2rem;">
+      <h1 style="font-size:2.25rem; font-weight:800; color:var(--dark); margin-bottom:0.5rem;">
+        Conversational AI Health Assistant
+      </h1>
+      <p style="color:var(--slate-600); font-size:1rem;">
+        Get compassionate guidance, safe symptom triage, and answers to medical queries.
+      </p>
+    </div>
+
+    <!-- Chat Card -->
+    <div class="chat-container" id="chat-container-card" style="height:620px;">
+      <div class="chat-header">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <span style="color:var(--success);">●</span>
+          <strong>AI Clinical Assistant</strong>
+          <span class="badge badge-verified">Safety Shield Active</span>
+        </div>
+        <button id="share-consultation-btn" onclick="HealthChat.openShareModal()" class="btn btn-secondary btn-sm" style="display:none;">
+          📤 Share with Doctor
+        </button>
+      </div>
+
+      <div class="chat-messages" id="chat-messages-container">
+        <div class="chat-msg ai">
+          <div class="chat-avatar avatar-ai">AI</div>
+          <div class="chat-bubble">
+            <div>
+              Hello! I am your AI Health Assistant. How can I help you today? You can describe any symptoms you are experiencing (e.g. cough, headache, joint pain, or stomach discomfort).<br><br>
+              <strong>Safety Reminder:</strong> I am an AI informational system and do not replace formal clinical diagnosis. If experiencing acute chest tightness, severe breathlessness, or sudden numbness, call 112 / 911 immediately.
+            </div>
+            <div class="chat-disclaimer">
+              ℹ️ Medical Disclaimer: Educational guidance only. Consult a doctor for diagnostic decisions.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Chips -->
+      <div class="chat-quick-chips" id="chat-quick-chips-bar">
+        <button onclick="HealthChat.sendMessage('I have had a throbbing headache and light sensitivity for 6 hours.')" class="quick-chip">
+          💬 Headache & Light Sensitivity
+        </button>
+        <button onclick="HealthChat.sendMessage('I have a persistent sore throat and low-grade fever.')" class="quick-chip">
+          💬 Sore Throat & Fever
+        </button>
+        <button onclick="HealthChat.sendMessage('What are the standard symptoms of seasonal allergic rhinitis?')" class="quick-chip">
+          💬 Seasonal Allergies
+        </button>
+        <button onclick="HealthChat.sendMessage('How can I safely manage mild muscle soreness after exercise?')" class="quick-chip">
+          💬 Muscle Soreness Self-Care
+        </button>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="chat-input-bar">
+        <input type="text" id="chat-user-input" class="chat-input" placeholder="Type your health question or symptom details...">
+        <button onclick="HealthChat.sendMessage()" class="btn btn-primary">Send</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Share Modal -->
+  <div class="modal-overlay" id="share-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Share Consultation with Doctor</h3>
+        <button onclick="HealthChat.closeShareModal()" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.9rem; color:var(--slate-600); margin-bottom:1rem;">
+          Select a verified doctor to share this consultation transcript with:
+        </p>
+        <div class="form-group">
+          <select id="share-doctor-select" class="form-control"></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="HealthChat.closeShareModal()" class="btn btn-outline">Cancel</button>
+        <button type="button" onclick="HealthChat.submitShareWithDoctor()" class="btn btn-primary">Authorize & Share</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/health-chat.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      HealthChat.initChat();
+    });
+  </script>
+</body>
+</html>

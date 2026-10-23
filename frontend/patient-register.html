@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Registration — AI Health Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/forms.css">
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="index.html" class="brand-logo">
+        <div class="logo-icon">⚕</div>
+        <span>AI Health Agent</span>
+      </a>
+      <div class="nav-actions">
+        <span style="font-size:0.9rem; color:var(--slate-400);">Already have an account?</span>
+        <a href="patient-login.html" class="btn btn-outline btn-sm">Log In</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="auth-page">
+    <div class="auth-card" style="max-width: 620px;">
+      <div class="auth-header">
+        <div class="auth-icon-badge icon-teal">📝</div>
+        <h1 class="auth-title">Patient Registration</h1>
+        <p class="auth-subtitle">Create your personal health profile for secure AI assistance</p>
+      </div>
+
+      <div id="alert-box"></div>
+
+      <form id="patient-register-form">
+        <div class="form-group">
+          <label class="form-label" for="reg-fullname">Full Name <span class="required">*</span></label>
+          <input type="text" id="reg-fullname" class="form-control" placeholder="e.g. Rahul Mehta" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="reg-email">Email Address <span class="required">*</span></label>
+            <input type="email" id="reg-email" class="form-control" placeholder="rahul@example.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reg-phone">Phone Number</label>
+            <input type="tel" id="reg-phone" class="form-control" placeholder="+919876543210">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="reg-dob">Date of Birth</label>
+            <input type="date" id="reg-dob" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reg-gender">Gender</label>
+            <select id="reg-gender" class="form-control">
+              <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+              <option value="MALE">Male</option>
+              <option value="FEMALE">Female</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-blood">Blood Group</label>
+          <select id="reg-blood" class="form-control">
+            <option value="">Unknown / Select Blood Group</option>
+            <option value="A+">A+</option>
+            <option value="A-">A-</option>
+            <option value="B+">B+</option>
+            <option value="B-">B-</option>
+            <option value="O+">O+</option>
+            <option value="O-">O-</option>
+            <option value="AB+">AB+</option>
+            <option value="AB-">AB-</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-allergies">Known Allergies</label>
+          <input type="text" id="reg-allergies" class="form-control" placeholder="e.g. Penicillin, Peanuts, Sulfa drugs (or None)">
+          <span class="form-help">Helps the AI assistant warn against contraindicated substances.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-chronic">Chronic Medical Conditions</label>
+          <input type="text" id="reg-chronic" class="form-control" placeholder="e.g. Type 2 Diabetes, Hypertension, Asthma (or None)">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-password">Password <span class="required">*</span></label>
+          <input type="password" id="reg-password" class="form-control" placeholder="Minimum 8 characters (Uppercase, lowercase, digit)" required>
+          <span class="form-help">Must contain at least 8 characters with uppercase, lowercase, and numbers.</span>
+        </div>
+
+        <!-- Mandatory Privacy Consents -->
+        <div style="background-color:var(--slate-50); border:1px solid var(--slate-200); border-radius:var(--radius-sm); padding:1rem; margin:1.25rem 0;">
+          <h4 style="font-size:0.875rem; font-weight:700; color:var(--dark); margin-bottom:0.6rem;">
+            Consent & Privacy Safeguards
+          </h4>
+
+          <div class="checkbox-group">
+            <input type="checkbox" id="consent-health" required>
+            <label class="checkbox-label" for="consent-health">
+              <strong>Health Data Processing Consent:</strong> I authorize AI Health Agent to process my uploaded medical reports and consultation entries using secure AI inference engines. I understand that AI does not replace licensed medical diagnosis. <span class="required">*</span>
+            </label>
+          </div>
+
+          <div class="checkbox-group" style="margin-bottom:0;">
+            <input type="checkbox" id="consent-privacy" required>
+            <label class="checkbox-label" for="consent-privacy">
+              <strong>Privacy Policy Agreement:</strong> I agree to the platform's terms of service and strict data minimization, encryption, and audit retention policies. <span class="required">*</span>
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" id="reg-submit-btn" class="btn btn-primary btn-block btn-lg">
+          Complete Registration & Proceed
+        </button>
+      </form>
+
+      <div style="margin-top:1.5rem; text-align:center; font-size:0.9rem; color:var(--slate-600);">
+        Already registered? <a href="patient-login.html" style="font-weight:600;">Sign In here</a>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.getElementById("patient-register-form");
+      const alertBox = document.getElementById("alert-box");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        alertBox.innerHTML = "";
+
+        const payload = {
+          full_name: document.getElementById("reg-fullname").value.trim(),
+          email: document.getElementById("reg-email").value.trim(),
+          phone: document.getElementById("reg-phone").value.trim(),
+          dob: document.getElementById("reg-dob").value || null,
+          gender: document.getElementById("reg-gender").value,
+          blood_group: document.getElementById("reg-blood").value || null,
+          allergies: document.getElementById("reg-allergies").value.trim(),
+          chronic_conditions: document.getElementById("reg-chronic").value.trim(),
+          password: document.getElementById("reg-password").value,
+          consent_health: document.getElementById("consent-health").checked,
+          consent_privacy: document.getElementById("consent-privacy").checked
+        };
+
+        const btn = document.getElementById("reg-submit-btn");
+        btn.innerText = "Creating Account...";
+        btn.disabled = true;
+
+        try {
+          const res = await fetch("/api/auth/patient/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+
+          if (res.ok && data.success) {
+            Auth.setToken(data.token);
+            Auth.setUser(data.user);
+            alertBox.innerHTML = `<div class="alert alert-success">Registration successful! Redirecting to your dashboard...</div>`;
+            setTimeout(() => {
+              window.location.href = "patient-dashboard.html";
+            }, 1200);
+          } else {
+            alertBox.innerHTML = `<div class="alert alert-danger">${data.error || "Registration failed."}</div>`;
+            btn.innerText = "Complete Registration & Proceed";
+            btn.disabled = false;
+          }
+        } catch (err) {
+          alertBox.innerHTML = `<div class="alert alert-danger">Network error: ${err.message}</div>`;
+          btn.innerText = "Complete Registration & Proceed";
+          btn.disabled = false;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

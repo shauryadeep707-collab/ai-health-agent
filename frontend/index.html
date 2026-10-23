@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Health Agent — Intelligent Medical Guidance & Doctor Verification</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Emergency Warning Bar -->
+  <div class="emergency-banner">
+    ⚠️ In case of life-threatening medical emergencies (severe chest pain, difficulty breathing, stroke symptoms), call 112 / 911 immediately.
+  </div>
+
+  <!-- Navigation -->
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="index.html" class="brand-logo">
+        <div class="logo-icon">⚕</div>
+        <span>AI Health Agent</span>
+      </a>
+
+      <nav>
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-link active">Home</a></li>
+          <li><a href="health-chat.html" class="nav-link">AI Health Chat</a></li>
+          <li><a href="report-analysis.html" class="nav-link">Report Analysis</a></li>
+          <li><a href="doctor-search.html" class="nav-link">Find Doctors</a></li>
+          <li><a href="medicine-search.html" class="nav-link">Medicines</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions" id="nav-actions">
+        <a href="patient-login.html" class="btn btn-outline btn-sm">Patient Login</a>
+        <a href="doctor-login.html" class="btn btn-primary btn-sm">Doctor Portal</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="container">
+      <div class="hero-badge">
+        🔒 Verified Doctor Network with DigiLocker Integration
+      </div>
+      <h1 class="hero-title">
+        Intelligent Medical Guidance &<br><span>Trusted Healthcare Access</span>
+      </h1>
+      <p class="hero-subtitle">
+        Understand your medical reports in plain English, screen symptoms with safe AI triage, and book consultations with genuine medical practitioners verified via DigiLocker.
+      </p>
+
+      <div class="hero-ctas">
+        <a href="patient-register.html" class="btn btn-primary btn-lg">
+          👤 Get Started as Patient
+        </a>
+        <a href="doctor-register.html" class="btn btn-secondary btn-lg">
+          🩺 Join as Verified Doctor
+        </a>
+        <a href="health-chat.html" class="btn btn-outline btn-lg">
+          💬 Try AI Health Consultation
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- DigiLocker Spotlight Section -->
+  <section class="container">
+    <div class="verification-spotlight">
+      <div class="spotlight-content">
+        <div class="spotlight-badge">Official Credential Verification</div>
+        <h2 class="spotlight-title">DigiLocker Authenticated Doctors</h2>
+        <p class="spotlight-desc">
+          We do not rely on unverifiable PDF uploads. Every registered doctor fetches and shares their official medical council registration certificate directly through DigiLocker and API Setu. This prevents credential forgery and safeguards patient care.
+        </p>
+      </div>
+      <div>
+        <a href="doctor-register.html" class="btn-digilocker" style="font-size:1.05rem; padding:1rem 2rem;">
+          <span class="digilocker-emblem">DL</span> Doctor DigiLocker Registration
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Core Capabilities</div>
+        <h2 class="section-title">Comprehensive AI Healthcare Solutions</h2>
+        <p class="section-desc">Designed with rigorous medical safety principles, patient privacy consent, and seamless doctor collaboration.</p>
+      </div>
+
+      <div class="features-grid">
+        <!-- Feature 1: Report Analysis -->
+        <div class="feature-card">
+          <div class="feature-icon-wrapper icon-blue">🔬</div>
+          <h3 class="feature-title">AI Medical Report Analysis</h3>
+          <p class="feature-desc">
+            Upload blood tests, metabolic panels, and scans in PDF or image formats. Extracted values are compared to standard intervals and explained in clear, non-diagnostic English.
+          </p>
+          <a href="report-analysis.html" style="display:inline-block; margin-top:1rem; font-weight:600;">Analyze Report →</a>
+        </div>
+
+        <!-- Feature 2: Conversational Triage -->
+        <div class="feature-card">
+          <div class="feature-icon-wrapper icon-teal">💬</div>
+          <h3 class="feature-title">Conversational AI Health Chat</h3>
+          <p class="feature-desc">
+            Ask symptom questions and receive safe triage guidance. The assistant actively screens for emergency red flags before recommending self-care or doctor consultation.
+          </p>
+          <a href="health-chat.html" style="display:inline-block; margin-top:1rem; font-weight:600;">Consult Assistant →</a>
+        </div>
+
+        <!-- Feature 3: Verified Doctor Search -->
+        <div class="feature-card">
+          <div class="feature-icon-wrapper icon-amber">🩺</div>
+          <h3 class="feature-title">Find Verified Doctors</h3>
+          <p class="feature-desc">
+            Search cardiologists, endocrinologists, and general physicians by council, specialty, and location. Book live appointments and securely share reports with explicit consent.
+          </p>
+          <a href="doctor-search.html" style="display:inline-block; margin-top:1rem; font-weight:600;">Search Doctors →</a>
+        </div>
+
+        <!-- Feature 4: Medicine Compendium -->
+        <div class="feature-card">
+          <div class="feature-icon-wrapper icon-purple">💊</div>
+          <h3 class="feature-title">Medicines & Interaction Checker</h3>
+          <p class="feature-desc">
+            Access authoritative drug uses, contraindications, and precautions. Check pairwise combinations for dangerous interactions and browse verified pharmacy partners.
+          </p>
+          <a href="medicine-search.html" style="display:inline-block; margin-top:1rem; font-weight:600;">Search Medicines →</a>
+        </div>
+      </div>
+
+      <!-- Legal and Medical Disclaimer -->
+      <div class="disclaimer-card">
+        <div class="disclaimer-title">
+          ⚖️ Mandatory Health & AI Safety Disclaimer
+        </div>
+        <div class="disclaimer-text">
+          AI Health Agent is designed for informational, educational, and workflow support purposes only. It does NOT provide formal medical diagnoses, generate prescription drug orders, or replace in-person consultation with a qualified, licensed medical practitioner. In emergency situations, seek immediate professional emergency medical care.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-brand">⚕ AI Health Agent</div>
+          <p class="footer-text">
+            Connecting patients, verified medical practitioners, and safe AI assistance with DigiLocker authentication and Oracle SQL architecture.
+          </p>
+        </div>
+        <div>
+          <h4 class="footer-col-title">Patient Portal</h4>
+          <ul class="footer-links">
+            <li><a href="patient-login.html">Patient Login</a></li>
+            <li><a href="patient-register.html">Patient Register</a></li>
+            <li><a href="health-chat.html">AI Health Chat</a></li>
+            <li><a href="report-analysis.html">Upload Lab Report</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="footer-col-title">Doctor Portal</h4>
+          <ul class="footer-links">
+            <li><a href="doctor-login.html">Doctor Login</a></li>
+            <li><a href="doctor-register.html">Doctor Register</a></li>
+            <li><a href="doctor-dashboard.html">DigiLocker Verification</a></li>
+            <li><a href="doctor-search.html">Directory</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="footer-col-title">Medical Resources</h4>
+          <ul class="footer-links">
+            <li><a href="medicine-search.html">Medicine Database</a></li>
+            <li><a href="medicine-search.html">Drug Interaction Tool</a></li>
+            <li><a href="https://digitallocker.gov.in" target="_blank" rel="noopener">DigiLocker Portal</a></li>
+            <li><a href="https://www.nmc.org.in" target="_blank" rel="noopener">National Medical Commission</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>&copy; 2026 AI Health Agent. All rights reserved. Secure Health Information Processing.</div>
+        <div>Engineered with Python, Flask, Oracle SQL & DigiLocker Gateway.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/auth.js"></script>
+</body>
+</html>

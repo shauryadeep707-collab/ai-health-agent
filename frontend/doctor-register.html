@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doctor Registration & DigiLocker Verification — AI Health Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/forms.css">
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="index.html" class="brand-logo">
+        <div class="logo-icon">⚕</div>
+        <span>AI Health Agent</span>
+      </a>
+      <div class="nav-actions">
+        <span style="font-size:0.9rem; color:var(--slate-400);">Already registered?</span>
+        <a href="doctor-login.html" class="btn btn-outline btn-sm">Log In</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="auth-page">
+    <div class="auth-card" style="max-width: 680px;">
+      <div class="auth-header">
+        <div class="auth-icon-badge" style="background:#fed7aa; color:#9a3412;">🩺</div>
+        <h1 class="auth-title">Doctor Registration</h1>
+        <p class="auth-subtitle">Join the verified practitioner network via DigiLocker / API Setu</p>
+      </div>
+
+      <!-- DigiLocker Mandatory Verification Callout -->
+      <div style="background: linear-gradient(135deg, #002b49 0%, #004466 100%); color:white; border-radius:var(--radius-md); padding:1.25rem; margin-bottom:1.75rem;">
+        <div style="display:flex; align-items:center; gap:0.65rem; margin-bottom:0.4rem;">
+          <span class="digilocker-emblem" style="background:white; color:#002b49;">DL</span>
+          <strong style="font-size:1.05rem;">DigiLocker Verification Requirement</strong>
+        </div>
+        <p style="font-size:0.875rem; color:#e0f2fe; line-height:1.45;">
+          Per statutory healthcare guidelines, medical practitioners must verify their professional registration credential through <strong>DigiLocker / API Setu</strong>. Ordinary file uploads are NOT accepted as primary verification.
+        </p>
+      </div>
+
+      <div id="alert-box"></div>
+
+      <form id="doctor-register-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="doc-fullname">Doctor Full Name <span class="required">*</span></label>
+            <input type="text" id="doc-fullname" class="form-control" placeholder="e.g. Dr. Rajesh K. Varma" required>
+            <span class="form-help">Must match your medical council certificate.</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="doc-email">Professional Email <span class="required">*</span></label>
+            <input type="email" id="doc-email" class="form-control" placeholder="dr.rajesh@clinic.org" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="doc-phone">Phone Number <span class="required">*</span></label>
+            <input type="tel" id="doc-phone" class="form-control" placeholder="+919876543210" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="doc-specialty">Primary Specialty <span class="required">*</span></label>
+            <select id="doc-specialty" class="form-control" required>
+              <option value="General Medicine">General Medicine</option>
+              <option value="Cardiology">Cardiology</option>
+              <option value="Endocrinology">Endocrinology</option>
+              <option value="Pediatrics">Pediatrics</option>
+              <option value="Neurology">Neurology</option>
+              <option value="Dermatology">Dermatology</option>
+              <option value="Orthopedics">Orthopedics</option>
+              <option value="Pulmonology">Pulmonology</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="doc-qual">Medical Qualifications <span class="required">*</span></label>
+          <input type="text" id="doc-qual" class="form-control" placeholder="e.g. MBBS, MD (General Medicine), DNB" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="doc-regno">Medical Registration Number <span class="required">*</span></label>
+            <input type="text" id="doc-regno" class="form-control" placeholder="e.g. DMC-2005-18934" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="doc-council">Registration Council <span class="required">*</span></label>
+            <input type="text" id="doc-council" class="form-control" placeholder="e.g. Delhi Medical Council" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="doc-jurisdiction">Jurisdiction / State <span class="required">*</span></label>
+            <input type="text" id="doc-jurisdiction" class="form-control" placeholder="e.g. Delhi NCR, India" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="doc-experience">Years of Experience</label>
+            <input type="number" id="doc-experience" class="form-control" min="0" max="65" value="5">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="doc-clinic">Clinic / Hospital Address</label>
+            <input type="text" id="doc-clinic" class="form-control" placeholder="e.g. Metro Multispecialty Hospital, New Delhi">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="doc-fee">Consultation Fee (INR ₹)</label>
+            <input type="number" id="doc-fee" class="form-control" min="0" step="50" value="800">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="doc-bio">Professional Bio</label>
+          <textarea id="doc-bio" class="form-control" placeholder="Brief summary of clinical background, clinical interests, and practice history..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="doc-password">Account Password <span class="required">*</span></label>
+          <input type="password" id="doc-password" class="form-control" placeholder="Minimum 8 characters (Uppercase, lowercase, digit)" required>
+        </div>
+
+        <!-- Verification Consent -->
+        <div class="checkbox-group" style="background:#f8fafc; border:1px solid #e2e8f0; padding:1rem; border-radius:var(--radius-sm); margin:1.25rem 0;">
+          <input type="checkbox" id="consent-verification" required>
+          <label class="checkbox-label" for="consent-verification">
+            <strong>Statutory Identity & Council Verification Consent:</strong> I authorize the application to verify my medical registration credential via the DigiLocker / API Setu authorized gateway. I confirm that the credentials provided are accurate and active. <span class="required">*</span>
+          </label>
+        </div>
+
+        <!-- Primary Registration Action -->
+        <button type="submit" id="doc-reg-submit-btn" class="btn btn-secondary btn-block btn-lg" style="margin-bottom:1rem;">
+          Register & Continue to DigiLocker Verification
+        </button>
+      </form>
+
+      <div style="margin-top:1.5rem; text-align:center; font-size:0.9rem; color:var(--slate-600);">
+        Already registered? <a href="doctor-login.html" style="font-weight:600;">Sign in to your doctor account</a>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script src="js/doctor-verification.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.getElementById("doctor-register-form");
+      const alertBox = document.getElementById("alert-box");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        alertBox.innerHTML = "";
+
+        const payload = {
+          full_name: document.getElementById("doc-fullname").value.trim(),
+          email: document.getElementById("doc-email").value.trim(),
+          phone: document.getElementById("doc-phone").value.trim(),
+          specialty: document.getElementById("doc-specialty").value,
+          medical_qualification: document.getElementById("doc-qual").value.trim(),
+          registration_number: document.getElementById("doc-regno").value.trim(),
+          registration_council: document.getElementById("doc-council").value.trim(),
+          jurisdiction: document.getElementById("doc-jurisdiction").value.trim(),
+          experience_years: parseInt(document.getElementById("doc-experience").value) || 0,
+          clinic_address: document.getElementById("doc-clinic").value.trim(),
+          consultation_fee: parseFloat(document.getElementById("doc-fee").value) || 500.0,
+          bio: document.getElementById("doc-bio").value.trim(),
+          password: document.getElementById("doc-password").value,
+          consent_verification: document.getElementById("consent-verification").checked
+        };
+
+        const btn = document.getElementById("doc-reg-submit-btn");
+        btn.innerText = "Registering...";
+        btn.disabled = true;
+
+        try {
+          const res = await fetch("/api/auth/doctor/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+
+          if (res.ok && data.success) {
+            Auth.setToken(data.token);
+            Auth.setUser(data.user);
+            alertBox.innerHTML = `<div class="alert alert-success">Doctor registered successfully! Redirecting to DigiLocker verification portal...</div>`;
+            setTimeout(() => {
+              window.location.href = "doctor-dashboard.html?initiate_digilocker=1";
+            }, 1200);
+          } else {
+            alertBox.innerHTML = `<div class="alert alert-danger">${data.error || "Registration failed."}</div>`;
+            btn.innerText = "Register & Continue to DigiLocker Verification";
+            btn.disabled = false;
+          }
+        } catch (err) {
+          alertBox.innerHTML = `<div class="alert alert-danger">Network error: ${err.message}</div>`;
+          btn.innerText = "Register & Continue to DigiLocker Verification";
+          btn.disabled = false;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

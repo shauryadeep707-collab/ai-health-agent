@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Medicines & Interaction Checker — AI Health Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/forms.css">
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="index.html" class="brand-logo">
+        <div class="logo-icon">⚕</div>
+        <span>AI Health Agent</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-link">Home</a></li>
+          <li><a href="health-chat.html" class="nav-link">AI Health Chat</a></li>
+          <li><a href="report-analysis.html" class="nav-link">Report Analysis</a></li>
+          <li><a href="doctor-search.html" class="nav-link">Find Doctors</a></li>
+          <li><a href="medicine-search.html" class="nav-link active">Medicines</a></li>
+        </ul>
+      </nav>
+      <div class="nav-actions" id="nav-actions">
+        <!-- Rendered by auth.js -->
+      </div>
+    </div>
+  </header>
+
+  <main class="container" style="padding: 2.5rem 1.25rem; max-width:960px;">
+    <div style="text-align:center; margin-bottom:2.5rem;">
+      <h1 style="font-size:2.25rem; font-weight:800; color:var(--dark); margin-bottom:0.5rem;">
+        Medicines, Safety & Interaction Checker
+      </h1>
+      <p style="color:var(--slate-600); font-size:1.05rem;">
+        Authoritative drug references from WHO, FDA & CDSCO with verified pharmacy access.
+      </p>
+    </div>
+
+    <!-- Drug-Drug Interaction Checker -->
+    <div class="panel" style="border-left: 4px solid var(--warning); margin-bottom:2rem;">
+      <div class="panel-header">
+        <h3 class="panel-title">⚠️ Clinical Drug-Drug Interaction Checker</h3>
+      </div>
+      <p style="font-size:0.9rem; color:var(--slate-600); margin-bottom:1rem;">
+        Select two or more medications to check for known adverse clinical interactions:
+      </p>
+
+      <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem;">
+        <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem;">
+          <input type="checkbox" name="med-interaction" value="med-001"> Paracetamol (Dolo 650)
+        </label>
+        <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem;">
+          <input type="checkbox" name="med-interaction" value="med-002"> Metformin (Glycomet)
+        </label>
+        <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem;">
+          <input type="checkbox" name="med-interaction" value="med-003"> Atorvastatin (Lipitor)
+        </label>
+        <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem;">
+          <input type="checkbox" name="med-interaction" value="med-004"> Amoxicillin + Clavulanate (Augmentin)
+        </label>
+        <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem;">
+          <input type="checkbox" name="med-interaction" value="med-005"> Omeprazole (Omez)
+        </label>
+      </div>
+
+      <button onclick="checkInteractions()" class="btn btn-secondary btn-sm">
+        Analyze Pairwise Interactions
+      </button>
+
+      <div id="interaction-results" style="margin-top:1rem;"></div>
+    </div>
+
+    <!-- Medicine Search Directory -->
+    <div class="panel">
+      <div class="panel-header">
+        <h3 class="panel-title">🔍 Search Medicine Compendium</h3>
+      </div>
+      <div style="display:flex; gap:0.75rem; margin-bottom:1.5rem;">
+        <input type="text" id="medicine-search-input" class="form-control" placeholder="Search by brand name or generic (e.g. Paracetamol, Metformin, Statin)...">
+        <button onclick="searchMedicines()" class="btn btn-primary">Search</button>
+      </div>
+
+      <div id="medicines-container"></div>
+    </div>
+
+    <!-- Safety Disclaimer -->
+    <div class="disclaimer-card">
+      <div class="disclaimer-title">💊 Pharmacy & Prescription Safeguard</div>
+      <div class="disclaimer-text">
+        Prescription-only drugs require an authorized prescription from a licensed medical practitioner. Never initiate, discontinue, or alter dosages without consulting your physician or pharmacist.
+      </div>
+    </div>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script>
+    async function searchMedicines() {
+      const q = document.getElementById("medicine-search-input")?.value || "";
+      const container = document.getElementById("medicines-container");
+      if (!container) return;
+      container.innerHTML = `<p style="text-align:center; padding:1.5rem; color:var(--slate-400);">Searching medicine reference database...</p>`;
+
+      try {
+        const res = await fetch(`/api/medicines/search?query=${encodeURIComponent(q)}`);
+        const data = await res.json();
+
+        if (data.success && data.medicines.length > 0) {
+          container.innerHTML = data.medicines.map(m => `
+            <div class="panel" style="margin-bottom:1rem; padding:1.25rem;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+                <div>
+                  <h4 style="font-size:1.15rem; font-weight:700; color:var(--dark);">${m.brand_name}</h4>
+                  <p style="font-size:0.9rem; color:var(--primary); font-weight:600;">Generic: ${m.generic_name} | Class: ${m.therapeutic_class || 'General'}</p>
+                </div>
+                <span class="badge ${m.rx_required ? 'badge-pending' : 'badge-verified'}">
+                  ${m.rx_required ? 'Rx Prescription' : 'OTC Available'}
+                </span>
+              </div>
+
+              <div style="font-size:0.875rem; line-height:1.5; color:var(--slate-700); margin-bottom:0.75rem;">
+                <p><strong>Primary Uses:</strong> ${m.common_uses}</p>
+                <p style="margin-top:0.25rem;"><strong>Safety Precautions:</strong> ${m.safety_precautions}</p>
+                <p style="margin-top:0.25rem;"><strong style="color:var(--danger);">Contraindications:</strong> ${m.contraindications}</p>
+                ${m.common_side_effects ? `<p style="margin-top:0.25rem; color:var(--slate-600);"><strong>Common Side Effects:</strong> ${m.common_side_effects}</p>` : ''}
+              </div>
+
+              <div style="font-size:0.8rem; color:var(--slate-400); margin-bottom:0.75rem;">
+                Verified Reference: ${m.trusted_source}
+              </div>
+
+              ${m.pharmacy_links && m.pharmacy_links.length > 0 ? `
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                  <span style="font-size:0.8rem; font-weight:600; color:var(--slate-600);">Legitimate Pharmacy Partners:</span>
+                  ${m.pharmacy_links.map(l => `
+                    <a href="${l.url}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="font-size:0.75rem;">
+                      🛒 ${l.store} ↗
+                    </a>
+                  `).join("")}
+                </div>
+              ` : ''}
+            </div>
+          `).join("");
+        } else {
+          container.innerHTML = `<p style="text-align:center; padding:2rem; color:var(--slate-400);">No medications found matching your search.</p>`;
+        }
+      } catch (e) {
+        container.innerHTML = `<p style="color:var(--danger); text-align:center; padding:1rem;">Error: ${e.message}</p>`;
+      }
+    }
+
+    async function checkInteractions() {
+      const checked = Array.from(document.querySelectorAll('input[name="med-interaction"]:checked')).map(el => el.value);
+      const resContainer = document.getElementById("interaction-results");
+      if (!resContainer) return;
+
+      if (checked.length < 2) {
+        resContainer.innerHTML = `<div class="alert alert-warning">Please check at least 2 medications to screen for adverse interactions.</div>`;
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/medicines/check-interactions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ medicine_ids: checked })
+        });
+        const data = await res.json();
+
+        if (data.success && data.has_interactions) {
+          resContainer.innerHTML = data.interactions.map(item => `
+            <div class="alert alert-danger" style="margin-bottom:0.75rem;">
+              <div>
+                <strong>⚠️ Potential Adverse Interaction: ${item.med_a_name} + ${item.med_b_name} [Severity: ${item.severity}]</strong>
+                <p style="margin-top:0.25rem;">${item.interaction_desc}</p>
+                <p style="margin-top:0.25rem; font-style:italic;"><strong>Doctor Advice:</strong> ${item.clinical_advice}</p>
+              </div>
+            </div>
+          `).join("");
+        } else {
+          resContainer.innerHTML = `<div class="alert alert-success">✓ No known adverse pairwise interactions detected between the selected medications in our reference database.</div>`;
+        }
+      } catch (err) {
+        resContainer.innerHTML = `<div class="alert alert-danger">Interaction check failed: ${err.message}</div>`;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      searchMedicines();
+    });
+  </script>
+</body>
+</html>

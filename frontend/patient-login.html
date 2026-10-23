@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Login — AI Health Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/forms.css">
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="index.html" class="brand-logo">
+        <div class="logo-icon">⚕</div>
+        <span>AI Health Agent</span>
+      </a>
+      <div class="nav-actions">
+        <span style="font-size:0.9rem; color:var(--slate-400);">Are you a doctor?</span>
+        <a href="doctor-login.html" class="btn btn-outline btn-sm">Doctor Login</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="auth-page">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-icon-badge icon-blue">👤</div>
+        <h1 class="auth-title">Patient Login</h1>
+        <p class="auth-subtitle">Access your AI health records, reports, and appointments</p>
+      </div>
+
+      <div id="alert-box"></div>
+
+      <form id="patient-login-form">
+        <div class="form-group">
+          <label class="form-label" for="login-email">Email Address <span class="required">*</span></label>
+          <input type="email" id="login-email" class="form-control" placeholder="e.g. rahul.mehta@email.com" required autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="login-password">Password <span class="required">*</span></label>
+          <input type="password" id="login-password" class="form-control" placeholder="Enter your secure password" required autocomplete="current-password">
+        </div>
+
+        <button type="submit" id="login-submit-btn" class="btn btn-primary btn-block btn-lg" style="margin-top:1rem;">
+          Sign In to Patient Portal
+        </button>
+      </form>
+
+      <div style="margin-top:1.5rem; text-align:center; font-size:0.9rem; color:var(--slate-600);">
+        Don't have an account yet? <a href="patient-register.html" style="font-weight:600;">Create Patient Account</a>
+      </div>
+
+      <div class="disclaimer-card" style="margin-top:1.5rem; margin-bottom:0;">
+        <div class="disclaimer-title" style="font-size:0.85rem;">🔒 Patient Data Protection</div>
+        <div class="disclaimer-text" style="font-size:0.8rem;">
+          All health records are strictly confidential and shared with medical practitioners only with your explicit authorization.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // If already logged in as patient, redirect
+      const user = Auth.getUser();
+      if (user && user.role === "PATIENT") {
+        window.location.href = "patient-dashboard.html";
+        return;
+      }
+
+      const form = document.getElementById("patient-login-form");
+      const alertBox = document.getElementById("alert-box");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        alertBox.innerHTML = "";
+        const email = document.getElementById("login-email").value.trim();
+        const password = document.getElementById("login-password").value;
+        const btn = document.getElementById("login-submit-btn");
+
+        btn.innerText = "Signing in...";
+        btn.disabled = true;
+
+        try {
+          const result = await Auth.login(email, password, "PATIENT");
+          if (result.success) {
+            window.location.href = "patient-dashboard.html";
+          } else {
+            alertBox.innerHTML = `<div class="alert alert-danger">${result.error}</div>`;
+          }
+        } catch (err) {
+          alertBox.innerHTML = `<div class="alert alert-danger">Connection error. Please try again.</div>`;
+        } finally {
+          btn.innerText = "Sign In to Patient Portal";
+          btn.disabled = false;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doctor Portal & Dashboard — AI Health Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/forms.css">
+</head>
+<body>
+
+  <!-- Top Banner -->
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="index.html" class="brand-logo">
+        <div class="logo-icon" style="background: linear-gradient(135deg, #0d9488, #0369a1);">🩺</div>
+        <span>AI Health Agent <small style="font-size:0.8rem; color:var(--primary); font-weight:600;">(Doctor Portal)</small></span>
+      </a>
+      <div class="nav-actions" id="nav-actions">
+        <!-- Rendered by auth.js -->
+      </div>
+    </div>
+  </header>
+
+  <div class="dashboard-layout">
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="sidebar-doc-name">Doctor Portal</div>
+        <div class="sidebar-user-role" id="sidebar-doc-status">
+          <span>●</span> Verification: Loading...
+        </div>
+      </div>
+
+      <ul class="sidebar-nav">
+        <li>
+          <a class="sidebar-link active" onclick="switchDocTab('verification')">
+            <span class="sidebar-icon">🔒</span> DigiLocker Verification
+          </a>
+        </li>
+        <li>
+          <a class="sidebar-link" onclick="switchDocTab('appointments')">
+            <span class="sidebar-icon">📅</span> Appointment Requests
+          </a>
+        </li>
+        <li>
+          <a class="sidebar-link" onclick="switchDocTab('consultations')">
+            <span class="sidebar-icon">💬</span> Shared Consultations
+          </a>
+        </li>
+        <li>
+          <a class="sidebar-link" onclick="switchDocTab('profile')">
+            <span class="sidebar-icon">🩺</span> Credentials & Bio
+          </a>
+        </li>
+      </ul>
+
+      <div style="padding: 1rem 0.75rem; border-top:1px solid var(--slate-200);">
+        <button onclick="Auth.logout()" class="btn btn-outline btn-sm btn-block">
+          Log Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+
+      <!-- =====================================================================
+           TAB 1: DIGILOCKER VERIFICATION
+           ===================================================================== -->
+      <section id="tab-verification" class="dashboard-tab-content active">
+        <div class="dashboard-header">
+          <div>
+            <h1 class="dashboard-title">Medical Credential & DigiLocker Verification</h1>
+            <p class="dashboard-subtitle">Statutory credential authentication directly through official Medical Councils & DigiLocker API Setu</p>
+          </div>
+        </div>
+
+        <!-- Verification Status Container (Rendered by doctor-verification.js) -->
+        <div id="verification-status-container">
+          <p style="text-align:center; padding:2rem; color:var(--slate-400);">Loading verification status...</p>
+        </div>
+
+        <!-- Verification Mechanism Explanation -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title">🛡️ DigiLocker Verification Architecture</h3>
+          </div>
+          <div style="font-size:0.925rem; line-height:1.6; color:var(--slate-700);">
+            <p style="margin-bottom:0.75rem;">
+              To ensure zero identity fraud, medical practitioners must authenticate their credentials using the official government <strong>DigiLocker / API Setu</strong> gateway.
+            </p>
+            <ol style="margin-left:1.5rem; margin-bottom:1rem;">
+              <li><strong>Secure Authorization:</strong> You are redirected to DigiLocker's authorized consent page with state-bound anti-CSRF protection.</li>
+              <li><strong>Direct Gateway Retrieval:</strong> Your active Medical Council Registration Certificate (DocType: <code>DOCREG</code>) is fetched directly from the issuer (NMC / State Council).</li>
+              <li><strong>Cryptographic & Identity Verification:</strong> The server validates issuer signatures, matches full names using phonetic similarity, and confirms active license status.</li>
+              <li><strong>Strict Status Handling:</strong> Results are assigned to <code>VERIFIED</code>, <code>REVIEW_REQUIRED</code>, or <code>REJECTED</code>. If a council is not yet digitized, manual review is available.</li>
+            </ol>
+            <div style="background-color:var(--slate-50); border:1px solid var(--slate-200); padding:1rem; border-radius:var(--radius-sm); font-size:0.85rem; color:var(--slate-600);">
+              💡 <strong>Developer / Sandbox Note:</strong> When evaluating without live government client keys, you can test the sandbox simulator workflow below to trigger and observe each state machine transition.
+            </div>
+          </div>
+        </div>
+
+        <!-- Registered Credential Summary -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title">📋 Registered Doctor Credentials</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <tbody>
+                <tr>
+                  <th style="width:250px;">Doctor Full Name</th>
+                  <td id="doc-summary-name">-</td>
+                </tr>
+                <tr>
+                  <th>Medical Qualification</th>
+                  <td id="doc-summary-qual">-</td>
+                </tr>
+                <tr>
+                  <th>Registration Number</th>
+                  <td id="doc-summary-regno">-</td>
+                </tr>
+                <tr>
+                  <th>Registration Council</th>
+                  <td id="doc-summary-council">-</td>
+                </tr>
+                <tr>
+                  <th>Jurisdiction</th>
+                  <td id="doc-summary-jurisdiction">-</td>
+                </tr>
+                <tr>
+                  <th>Current Verification Status</th>
+                  <td id="doc-summary-status"><span class="badge badge-pending">PENDING</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           TAB 2: APPOINTMENT REQUESTS
+           ===================================================================== -->
+      <section id="tab-appointments" class="dashboard-tab-content">
+        <div class="dashboard-header">
+          <div>
+            <h1 class="dashboard-title">Appointment Requests</h1>
+            <p class="dashboard-subtitle">Manage patient consultations and clinical schedules</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div id="doctor-appointments-table">
+            <p style="text-align:center; padding:2rem; color:var(--slate-400);">Loading appointments...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           TAB 3: SHARED PATIENT CONSULTATIONS
+           ===================================================================== -->
+      <section id="tab-consultations" class="dashboard-tab-content">
+        <div class="dashboard-header">
+          <div>
+            <h1 class="dashboard-title">Authorized Patient Consultations</h1>
+            <p class="dashboard-subtitle">Medical dialogues and reports explicitly authorized and shared by patients</p>
+          </div>
+        </div>
+
+        <div class="panel" id="shared-consultations-panel">
+          <div id="shared-consultations-list">
+            <p style="text-align:center; padding:2rem; color:var(--slate-400);">Loading patient consultations...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           TAB 4: CREDENTIALS & BIO
+           ===================================================================== -->
+      <section id="tab-profile" class="dashboard-tab-content">
+        <div class="dashboard-header">
+          <div>
+            <h1 class="dashboard-title">Doctor Profile & Clinic Settings</h1>
+            <p class="dashboard-subtitle">Update public clinic address, consultation fee, and bio</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <form id="doc-profile-form" onsubmit="saveDoctorSettings(event)">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="edit-doc-name" class="form-control" disabled>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Registration Number</label>
+                <input type="text" id="edit-doc-regno" class="form-control" disabled>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Clinic / Hospital Address</label>
+                <input type="text" id="edit-doc-clinic" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Consultation Fee (INR ₹)</label>
+                <input type="number" id="edit-doc-fee" class="form-control" min="0" step="50">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Professional Biography</label>
+              <textarea id="edit-doc-bio" class="form-control"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </form>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Sandbox Test Modal -->
+  <div class="modal-overlay" id="sandbox-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">🧪 DigiLocker Sandbox Verification Simulator</h3>
+        <button onclick="DoctorVerification.closeSandboxModal()" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.9rem; color:var(--slate-600); margin-bottom:1rem;">
+          Test the backend state machine against official DigiLocker certificate XML/JSON scenarios:
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:0.75rem;">
+          <button onclick="DoctorVerification.triggerSandboxScenario('MATCH')" class="btn btn-secondary btn-block">
+            ✅ Scenario 1: Exact Match (Triggers VERIFIED)
+          </button>
+          <button onclick="DoctorVerification.triggerSandboxScenario('NAME_MISMATCH')" class="btn btn-outline btn-block" style="border-color:var(--info); color:var(--info);">
+            🔍 Scenario 2: Name Variation (Triggers REVIEW_REQUIRED)
+          </button>
+          <button onclick="DoctorVerification.triggerSandboxScenario('REG_MISMATCH')" class="btn btn-outline btn-block" style="border-color:var(--danger); color:var(--danger);">
+            ❌ Scenario 3: Registration Mismatch (Triggers REJECTED)
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="DoctorVerification.closeSandboxModal()" class="btn btn-outline">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/auth.js"></script>
+  <script src="js/doctor-verification.js"></script>
+  <script>
+    function switchDocTab(tabName) {
+      document.querySelectorAll(".dashboard-tab-content").forEach(el => el.classList.remove("active"));
+      document.querySelectorAll(".sidebar-link").forEach(el => el.classList.remove("active"));
+
+      const target = document.getElementById(`tab-${tabName}`);
+      if (target) target.classList.add("active");
+      event?.target?.closest(".sidebar-link")?.classList.add("active");
+
+      if (tabName === "appointments") {
+        loadDoctorAppointments();
+      } else if (tabName === "consultations") {
+        loadSharedConsultations();
+      }
+    }
+
+    async function loadDoctorDashboard() {
+      try {
+        const res = await Auth.fetchWithAuth("/api/doctor/dashboard/stats");
+        if (!res) return;
+        const data = await res.json();
+
+        if (data.success && data.doctor_profile) {
+          const doc = data.doctor_profile;
+          document.getElementById("sidebar-doc-name").innerText = doc.full_name;
+          document.getElementById("sidebar-doc-status").innerHTML = `<span>●</span> Status: <strong>${doc.verification_status}</strong>`;
+
+          document.getElementById("doc-summary-name").innerText = doc.full_name;
+          document.getElementById("doc-summary-qual").innerText = doc.medical_qualification;
+          document.getElementById("doc-summary-regno").innerText = doc.registration_number;
+          document.getElementById("doc-summary-council").innerText = doc.registration_council;
+          document.getElementById("doc-summary-jurisdiction").innerText = doc.jurisdiction;
+
+          const badgeClass = doc.verification_status === "VERIFIED" ? "badge-verified" : (doc.verification_status === "REVIEW_REQUIRED" ? "badge-review" : "badge-pending");
+          document.getElementById("doc-summary-status").innerHTML = `<span class="badge ${badgeClass}">${doc.verification_status}</span>`;
+
+          document.getElementById("edit-doc-name").value = doc.full_name;
+          document.getElementById("edit-doc-regno").value = doc.registration_number;
+          document.getElementById("edit-doc-clinic").value = doc.clinic_address || "";
+          document.getElementById("edit-doc-fee").value = doc.consultation_fee || 500;
+          document.getElementById("edit-doc-bio").value = doc.bio || "";
+        }
+
+        // Load verification status
+        DoctorVerification.loadVerificationStatus();
+      } catch (err) {
+        console.error("Doctor dashboard error:", err);
+      }
+    }
+
+    async function loadDoctorAppointments() {
+      const container = document.getElementById("doctor-appointments-table");
+      if (!container) return;
+
+      try {
+        const res = await Auth.fetchWithAuth("/api/doctor/dashboard/appointments");
+        if (!res) return;
+        const data = await res.json();
+
+        if (data.success && data.appointments.length > 0) {
+          container.innerHTML = `
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date & Time</th>
+                    <th>Patient Name</th>
+                    <th>Contact</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${data.appointments.map(a => `
+                    <tr>
+                      <td><strong>${a.appointment_date}</strong><br><small>${a.slot_time}</small></td>
+                      <td>${a.patient_name || 'Patient'}</td>
+                      <td>${a.patient_phone || a.patient_email || '-'}</td>
+                      <td>${a.reason_for_visit || 'General Consultation'}</td>
+                      <td><span class="badge ${a.status === 'CONFIRMED' ? 'badge-verified' : 'badge-pending'}">${a.status}</span></td>
+                      <td>
+                        ${a.status === 'BOOKED' ? `
+                          <button onclick="updateDoctorApt('${a.appointment_id}', 'CONFIRMED')" class="btn btn-secondary btn-sm">Confirm</button>
+                          <button onclick="updateDoctorApt('${a.appointment_id}', 'CANCELLED')" class="btn btn-outline btn-sm">Decline</button>
+                        ` : (a.status === 'CONFIRMED' ? `
+                          <button onclick="updateDoctorApt('${a.appointment_id}', 'COMPLETED')" class="btn btn-primary btn-sm">Mark Complete</button>
+                        ` : `<span style="font-size:0.8rem; color:var(--slate-400);">-</span>`)}
+                      </td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `<p style="color:var(--slate-400); text-align:center; padding:2rem;">No pending appointment requests.</p>`;
+        }
+      } catch (err) {
+        container.innerHTML = `<p style="color:var(--danger); text-align:center; padding:2rem;">Error: ${err.message}</p>`;
+      }
+    }
+
+    async function updateDoctorApt(aptId, status) {
+      try {
+        const res = await Auth.fetchWithAuth(`/api/appointments/${aptId}/status`, {
+          method: "PUT",
+          body: JSON.stringify({ status })
+        });
+        if (!res) return;
+        const data = await res.json();
+        if (data.success) {
+          alert(`Appointment marked as ${status}.`);
+          loadDoctorAppointments();
+        }
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    }
+
+    async function loadSharedConsultations() {
+      const container = document.getElementById("shared-consultations-list");
+      if (!container) return;
+
+      try {
+        const res = await Auth.fetchWithAuth("/api/doctor/dashboard/consultations");
+        if (!res) return;
+        const data = await res.json();
+
+        if (res.status === 403) {
+          container.innerHTML = `
+            <div class="alert alert-warning">
+              ⚠️ <strong>Verification Required:</strong> Only medical practitioners whose DigiLocker verification is completed can access patient records and consultations. Please complete your DigiLocker verification.
+            </div>
+          `;
+          return;
+        }
+
+        if (data.success && data.consultations.length > 0) {
+          container.innerHTML = data.consultations.map(c => `
+            <div class="panel" style="margin-bottom:1rem; padding:1.25rem;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+                <div>
+                  <h4 style="font-size:1.05rem; font-weight:700; color:var(--dark);">
+                    👤 Patient: ${c.patient_name} (${c.gender || 'Unknown'}, Blood: ${c.blood_group || 'Unknown'})
+                  </h4>
+                  <p style="font-size:0.85rem; color:var(--slate-600);">
+                    Inquiry Title: "${c.title}"
+                  </p>
+                </div>
+                <span class="badge ${c.risk_category === 'LOW' ? 'badge-verified' : 'badge-rejected'}">
+                  Risk Tier: ${c.risk_category}
+                </span>
+              </div>
+              <div style="font-size:0.8rem; color:var(--slate-400); margin-bottom:0.75rem;">
+                Authorized by patient on ${c.updated_at}
+              </div>
+              <button onclick="viewSharedMessages('${c.consultation_id}')" class="btn btn-outline btn-sm">
+                View Dialogue & Triage Log
+              </button>
+              <div id="messages-container-${c.consultation_id}" style="margin-top:1rem; display:none;"></div>
+            </div>
+          `).join("");
+        } else {
+          container.innerHTML = `<p style="color:var(--slate-400); text-align:center; padding:2rem;">No patient consultations currently shared with your account.</p>`;
+        }
+      } catch (err) {
+        container.innerHTML = `<p style="color:var(--danger); text-align:center; padding:2rem;">Error: ${err.message}</p>`;
+      }
+    }
+
+    async function viewSharedMessages(consultationId) {
+      const box = document.getElementById(`messages-container-${consultationId}`);
+      if (!box) return;
+
+      if (box.style.display === "block") {
+        box.style.display = "none";
+        return;
+      }
+
+      box.style.display = "block";
+      box.innerHTML = "Loading messages...";
+
+      try {
+        const res = await Auth.fetchWithAuth(`/api/ai/consultations/${consultationId}`);
+        if (!res) return;
+        const data = await res.json();
+
+        if (data.success && data.messages) {
+          box.innerHTML = `
+            <div style="background-color:var(--slate-50); border:1px solid var(--slate-200); border-radius:var(--radius-sm); padding:1rem; max-height:350px; overflow-y:auto;">
+              ${data.messages.map(m => `
+                <div style="margin-bottom:0.75rem; font-size:0.875rem;">
+                  <strong style="color:var(--primary);">${m.sender_type}:</strong>
+                  <div style="white-space:pre-line; margin-top:0.2rem; color:var(--slate-700);">${m.message_text}</div>
+                </div>
+              `).join("")}
+            </div>
+          `;
+        }
+      } catch (err) {
+        box.innerHTML = `Error: ${err.message}`;
+      }
+    }
+
+    async function saveDoctorSettings(e) {
+      e.preventDefault();
+      alert("Doctor profile settings saved.");
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!Auth.guardPage("DOCTOR")) return;
+      loadDoctorDashboard();
+
+      // Check if initiated from register page
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("initiate_digilocker") === "1") {
+        DoctorVerification.initiateDigiLockerFlow();
+      }
+    });
+  </script>
+</body>
+</html>

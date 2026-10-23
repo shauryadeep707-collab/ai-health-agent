@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Find Verified Doctors — AI Health Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/forms.css">
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="index.html" class="brand-logo">
+        <div class="logo-icon">⚕</div>
+        <span>AI Health Agent</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-link">Home</a></li>
+          <li><a href="health-chat.html" class="nav-link">AI Health Chat</a></li>
+          <li><a href="report-analysis.html" class="nav-link">Report Analysis</a></li>
+          <li><a href="doctor-search.html" class="nav-link active">Find Doctors</a></li>
+          <li><a href="medicine-search.html" class="nav-link">Medicines</a></li>
+        </ul>
+      </nav>
+      <div class="nav-actions" id="nav-actions">
+        <!-- Rendered by auth.js -->
+      </div>
+    </div>
+  </header>
+
+  <main class="container" style="padding: 2.5rem 1.25rem;">
+    <div style="text-align:center; max-width:700px; margin:0 auto 2.5rem;">
+      <h1 style="font-size:2.25rem; font-weight:800; color:var(--dark); margin-bottom:0.5rem;">
+        Find Verified Medical Practitioners
+      </h1>
+      <p style="color:var(--slate-600); font-size:1.05rem;">
+        Every doctor on our network is verified against their statutory medical council certificate via DigiLocker.
+      </p>
+    </div>
+
+    <!-- Search Controls -->
+    <div class="panel" style="background:#f8fafc; max-width:960px; margin:0 auto 2rem;">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="doc-search-query">Search Name or Keyword</label>
+          <input type="text" id="doc-search-query" class="form-control" placeholder="e.g. Dr. Priya, Cardiology, Hypertension">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="doc-search-specialty">Medical Specialty</label>
+          <select id="doc-search-specialty" class="form-control">
+            <option value="">All Specialties</option>
+            <option value="Cardiology">Cardiology</option>
+            <option value="Endocrinology">Endocrinology</option>
+            <option value="General Medicine">General Medicine</option>
+            <option value="Pediatrics">Pediatrics</option>
+            <option value="Neurology">Neurology</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+        <span style="font-size:0.85rem; color:var(--slate-500);">
+          🔒 Only doctors with verified credentials are authenticated for appointment booking.
+        </span>
+        <button onclick="Appointments.searchDoctors()" class="btn btn-primary">
+          Filter Practitioners
+        </button>
+      </div>
+    </div>
+
+    <!-- Results Grid -->
+    <div id="doctors-results-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1.5rem; max-width:960px; margin:0 auto;">
+      <!-- Populated by JS -->
+    </div>
+  </main>
+
+  <!-- Booking Modal -->
+  <div class="modal-overlay" id="book-apt-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Book Doctor Appointment</h3>
+        <button onclick="Appointments.closeBookModal()" class="modal-close">&times;</button>
+      </div>
+      <form onsubmit="Appointments.submitBooking(event)">
+        <div class="modal-body">
+          <p style="margin-bottom:1rem; font-size:0.95rem;">
+            Consultation with: <strong id="modal-doc-name">Doctor</strong><br>
+            Consultation Fee: <strong id="modal-doc-fee">₹500</strong>
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">Select Date <span class="required">*</span></label>
+            <input type="date" id="apt-date" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Select Time Slot <span class="required">*</span></label>
+            <select id="apt-slot" class="form-control" required>
+              <option value="09:30 AM">09:30 AM</option>
+              <option value="11:00 AM">11:00 AM</option>
+              <option value="02:30 PM">02:30 PM</option>
+              <option value="04:00 PM">04:00 PM</option>
+              <option value="05:30 PM">05:30 PM</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Chief Symptoms / Reason</label>
+            <textarea id="apt-reason" class="form-control" placeholder="Describe your primary reason for booking..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" onclick="Appointments.closeBookModal()" class="btn btn-outline">Cancel</button>
+          <button type="submit" class="btn btn-primary">Confirm Booking</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/appointments.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      Appointments.searchDoctors();
+    });
+  </script>
+</body>
+</html>

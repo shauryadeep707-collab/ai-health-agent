@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doctor Login — AI Health Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/forms.css">
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="index.html" class="brand-logo">
+        <div class="logo-icon">⚕</div>
+        <span>AI Health Agent</span>
+      </a>
+      <div class="nav-actions">
+        <span style="font-size:0.9rem; color:var(--slate-400);">Not a doctor?</span>
+        <a href="patient-login.html" class="btn btn-outline btn-sm">Patient Portal</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="auth-page">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-icon-badge icon-amber">🩺</div>
+        <h1 class="auth-title">Doctor Portal Login</h1>
+        <p class="auth-subtitle">Sign in to manage consultations, appointments, and credentials</p>
+      </div>
+
+      <div id="alert-box"></div>
+
+      <form id="doctor-login-form">
+        <div class="form-group">
+          <label class="form-label" for="doc-login-email">Doctor Email <span class="required">*</span></label>
+          <input type="email" id="doc-login-email" class="form-control" placeholder="dr.priya.sharma@hospital.org" required autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="doc-login-password">Password <span class="required">*</span></label>
+          <input type="password" id="doc-login-password" class="form-control" placeholder="Enter your secure password" required autocomplete="current-password">
+        </div>
+
+        <button type="submit" id="doc-login-btn" class="btn btn-primary btn-block btn-lg" style="margin-top:1rem;">
+          Sign In to Doctor Dashboard
+        </button>
+      </form>
+
+      <div style="margin-top:1.5rem; text-align:center; font-size:0.9rem; color:var(--slate-600);">
+        New medical practitioner? <a href="doctor-register.html" style="font-weight:600;">Register & Verify with DigiLocker</a>
+      </div>
+
+      <div style="margin-top:1.25rem; background-color:#eff6ff; border:1px solid #bfdbfe; border-radius:var(--radius-sm); padding:0.85rem; font-size:0.8rem; color:#1e40af;">
+        <strong>Demo Doctor Credentials:</strong><br>
+        Email: <code>dr.priya.sharma@hospital.org</code><br>
+        Password: <code>Password123!</code> (Status: Verified)
+      </div>
+    </div>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const user = Auth.getUser();
+      if (user && user.role === "DOCTOR") {
+        window.location.href = "doctor-dashboard.html";
+        return;
+      }
+
+      const form = document.getElementById("doctor-login-form");
+      const alertBox = document.getElementById("alert-box");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        alertBox.innerHTML = "";
+        const email = document.getElementById("doc-login-email").value.trim();
+        const password = document.getElementById("doc-login-password").value;
+        const btn = document.getElementById("doc-login-btn");
+
+        btn.innerText = "Signing in...";
+        btn.disabled = true;
+
+        try {
+          const result = await Auth.login(email, password, "DOCTOR");
+          if (result.success) {
+            window.location.href = "doctor-dashboard.html";
+          } else {
+            alertBox.innerHTML = `<div class="alert alert-danger">${result.error}</div>`;
+          }
+        } catch (err) {
+          alertBox.innerHTML = `<div class="alert alert-danger">Connection error. Please try again.</div>`;
+        } finally {
+          btn.innerText = "Sign In to Doctor Dashboard";
+          btn.disabled = false;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

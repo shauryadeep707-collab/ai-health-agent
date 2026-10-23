@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appointments — AI Health Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/forms.css">
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="index.html" class="brand-logo">
+        <div class="logo-icon">⚕</div>
+        <span>AI Health Agent</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-link">Home</a></li>
+          <li><a href="health-chat.html" class="nav-link">AI Health Chat</a></li>
+          <li><a href="report-analysis.html" class="nav-link">Report Analysis</a></li>
+          <li><a href="doctor-search.html" class="nav-link">Find Doctors</a></li>
+          <li><a href="medicine-search.html" class="nav-link">Medicines</a></li>
+        </ul>
+      </nav>
+      <div class="nav-actions" id="nav-actions">
+        <!-- Rendered by auth.js -->
+      </div>
+    </div>
+  </header>
+
+  <main class="container" style="padding: 2.5rem 1.25rem; max-width:960px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem; flex-wrap:wrap; gap:1rem;">
+      <div>
+        <h1 style="font-size:2.25rem; font-weight:800; color:var(--dark);">
+          My Medical Appointments
+        </h1>
+        <p style="color:var(--slate-600); font-size:1rem;">
+          Track scheduled visits, statuses, and clinical notes
+        </p>
+      </div>
+      <a href="doctor-search.html" class="btn btn-primary">
+        + Book New Appointment
+      </a>
+    </div>
+
+    <div class="panel">
+      <div id="my-appointments-container">
+        <p style="text-align:center; padding:2rem; color:var(--slate-400);">Loading your appointments...</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script src="js/appointments.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!Auth.isAuthenticated()) {
+        window.location.href = "patient-login.html";
+        return;
+      }
+      Appointments.loadMyAppointments();
+    });
+  </script>
+</body>
+</html>
