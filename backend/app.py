@@ -87,8 +87,10 @@ def create_app(config_class=Config):
 
     return app
 
+# Module-level application instance for production WSGI servers (Gunicorn / Render)
+app = create_app()
+
 if __name__ == "__main__":
-    app = create_app()
     print(f"================================================================")
     print(f" AI Health Agent Server starting on http://{Config.HOST}:{Config.PORT}")
     print(f" Database Mode: {Config.DB_TYPE.upper()}")

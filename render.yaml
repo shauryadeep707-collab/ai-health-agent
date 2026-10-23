@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: ai-health-agent
+    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn backend.app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: FLASK_ENV
+        value: production
+      - key: DB_TYPE
+        value: sqlite
+      - key: SQLITE_DB_PATH
+        value: database/ai_health.db
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: GEMINI_API_KEY
+        sync: false
