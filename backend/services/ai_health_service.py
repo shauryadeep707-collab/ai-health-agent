@@ -96,11 +96,78 @@ class AIHealthConsultationService:
         ai_provider_used = "Interactive Health Agent"
         follow_up_questions = []
 
-        # Try Google Gemini if configured
-        if Config.AI_PROVIDER == "gemini" and Config.GEMINI_API_KEY:
+        # Step 3: Pharmacology Knowledge RAG (Retrieval-Augmented Generation)
+        # Search verified medicine compendium for any drugs mentioned in the query
+        med_context = ""
+        try:
+            from backend.database.repositories import MedicineRepository
+            matched_meds = []
+            words = [w for w in re.findall(r"\b[A-Za-z]{3,}\b", user_message.lower()) if w not in ("and", "the", "for", "with", "have", "what", "how", "take", "can", "mild", "severe")]
+            for word in words[:6]:
+                found = MedicineRepository.search(word, limit=2)
+                if found:
+                    for m in found:
+                        if m["medicine_id"] not in [x["medicine_id"] for x in matched_meds]:
+                            matched_meds.append(m)
+            if matched_meds:
+                med_context = "VERIFIED MEDICINE PHARMACOLOGY KNOWLEDGE BASE (Use this exact data):\n"
+                for m in matched_meds[:3]:
+                    med_context += (
+                        f"• Drug: {m['brand_name']} ({m['generic_name']})\n"
+                        f"  Class: {m['therapeutic_class']}\n"
+                        f"  Common Uses: {m['common_uses']}\n"
+                        f"  Precautions: {m['safety_precautions']}\n"
+                        f"  Contraindications: {m['contraindications']}\n"
+                        f"  Side Effects: {m['common_side_effects']}\n"
+                    )
+                if len(matched_meds) >= 2:
+                    interactions = MedicineRepository.check_interactions([m["medicine_id"] for m in matched_meds])
+                    if interactions:
+                        med_context += "  DRUG-DRUG INTERACTIONS:\n"
+                        for inter in interactions:
+                            med_context += f"  - [{inter['severity']}]: {inter['interaction_desc']} Advice: {inter['clinical_advice']}\n"
+        except Exception as e:
+            logger.warning("Medicine RAG lookup failed: %s", e)
+
+        # Step 4: Try Ollama Local AI if configured (e.g. med-ai / llama3.2)
+        if Config.AI_PROVIDER == "ollama" or (not Config.GEMINI_API_KEY and not ai_response_text):
+            try:
+                ollama_url = f"{Config.OLLAMA_BASE_URL}/api/generate"
+                prompt_full = (
+                    f"{system_prompt}\n\n"
+                    f"{patient_context}\n"
+                    f"{med_context}\n"
+                    f"Patient Query: {user_message}\n"
+                    "Assistant (keep response concise, empathetic, and under 50 words):"
+                )
+                res = requests.post(
+                    ollama_url,
+                    json={
+                        "model": Config.OLLAMA_MODEL or "med-ai",
+                        "prompt": prompt_full,
+                        "stream": False,
+                        "options": {"temperature": 0.2, "num_predict": 180}
+                    },
+                    timeout=10
+                )
+                if res.status_code == 200:
+                    raw_ollama = res.json().get("response", "").strip()
+                    if raw_ollama:
+                        if "OPTIONS:" in raw_ollama:
+                            text_part, opt_part = raw_ollama.split("OPTIONS:", 1)
+                            ai_response_text = text_part.strip()
+                            follow_up_questions = [opt.strip() for opt in opt_part.split("|") if opt.strip()]
+                        else:
+                            ai_response_text = raw_ollama
+                        ai_provider_used = f"Ollama ({Config.OLLAMA_MODEL})"
+            except Exception as e:
+                logger.warning("Ollama health call failed (%s). Continuing to Gemini or heuristic engine.", e)
+
+        # Step 5: Try Google Gemini if configured and Ollama not used
+        if not ai_response_text and Config.AI_PROVIDER == "gemini" and Config.GEMINI_API_KEY:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{Config.GEMINI_MODEL}:generateContent?key={Config.GEMINI_API_KEY}"
-                dialogue_parts = [{"text": f"System Instructions: {system_prompt}\n{patient_context}"}]
+                dialogue_parts = [{"text": f"System Instructions: {system_prompt}\n{patient_context}\n{med_context}"}]
 
                 if conversation_history:
                     for msg in conversation_history[-6:]:
@@ -121,7 +188,6 @@ class AIHealthConsultationService:
                         parts = candidates[0]["content"].get("parts", [])
                         if parts:
                             raw_text = parts[0].get("text", "")
-                            # Parse OPTIONS: if Gemini returned them
                             if "OPTIONS:" in raw_text:
                                 text_part, opt_part = raw_text.split("OPTIONS:", 1)
                                 ai_response_text = text_part.strip()
