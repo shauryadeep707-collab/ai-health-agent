@@ -202,22 +202,6 @@ const ReportUpload = {
           </p>
         </div>
 
-        ${rawText ? `
-        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:var(--radius-md); margin-bottom:1.25rem; overflow:hidden;">
-          <div style="padding:0.75rem 1rem; background:#f8fafc; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="const b = document.getElementById('raw-ocr-text-box'); if(b) b.style.display = (b.style.display === 'none' ? 'block' : 'none');">
-            <span style="font-size:0.9rem; font-weight:700; color:var(--slate-800); display:flex; align-items:center; gap:0.4rem;">
-              📑 Verbatim Extracted Text (Exact Words Read Directly from File)
-            </span>
-            <span style="font-size:0.78rem; color:var(--primary); font-weight:600;">
-              Show / Hide Exact Words ▼
-            </span>
-          </div>
-          <div id="raw-ocr-text-box" style="display:none; padding:1rem; background:#f8fafc; font-family:Consolas, Monaco, monospace; font-size:0.82rem; color:#334155; max-height:220px; overflow-y:auto; white-space:pre-wrap; border-top:1px solid #e2e8f0; line-height:1.5;">
-${rawText}
-          </div>
-        </div>
-        ` : ''}
-
         ${analysis.urgent_flags ? `
           <div class="alert alert-warning" style="margin-bottom:1rem;">
             ⚠️ <strong>Clinical Note:</strong> ${analysis.urgent_flags}
