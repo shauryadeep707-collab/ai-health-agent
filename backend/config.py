@@ -17,8 +17,9 @@ class Config:
     DEBUG = os.getenv("FLASK_DEBUG", "1") == "1"
 
     # Database
-    DB_TYPE = os.getenv("DB_TYPE", "sqlite").lower()
-    SUPABASE_DB_URL = os.getenv("SUPABASE_DB_URL", "")
+    SUPABASE_DB_URL = os.getenv("SUPABASE_DB_URL", "") or os.getenv("DATABASE_URL", "")
+    _default_db_type = "supabase" if (SUPABASE_DB_URL and ("postgres" in SUPABASE_DB_URL or "supabase" in SUPABASE_DB_URL)) else "sqlite"
+    DB_TYPE = os.getenv("DB_TYPE", _default_db_type).lower()
     SQLITE_DB_PATH = BASE_DIR / os.getenv("SQLITE_DB_PATH", "database/ai_health.db")
     ORACLE_USER = os.getenv("ORACLE_USER", "ai_health_user")
     ORACLE_PASSWORD = os.getenv("ORACLE_PASSWORD", "")
