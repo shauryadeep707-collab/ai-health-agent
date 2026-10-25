@@ -369,6 +369,19 @@ class ReportAnalysisService:
                 else:
                     detected_title = user_test_type or (ai_title if not cls.is_generic_title(ai_title) else "") or inferred_title or "Diagnostic Lab Report"
 
+                abnormal_list = [p for p in ai_params if p.get("flag") in ("HIGH", "LOW", "CRITICAL")]
+                what_tells = ai_data.get("what_report_tells", "").strip()
+                primary_find = ai_data.get("primary_finding", "").strip()
+                if not what_tells:
+                    if abnormal_list:
+                        abn_names = ", ".join(p["parameter_name"] for p in abnormal_list[:3])
+                        what_tells = f"This report highlights {len(abnormal_list)} parameter(s) outside normal reference ranges ({abn_names}). Other tested values are within expected limits."
+                    else:
+                        what_tells = "All tested laboratory parameters are within standard healthy reference ranges."
+
+                if not primary_find:
+                    primary_find = f"{len(abnormal_list)} Parameter(s) Outside Reference Range" if abnormal_list else "Normal Diagnostic Profile"
+
                 detected_date = user_report_date or ai_data.get("test_date") or cls.extract_report_date(extracted_text)
                 return {
                     "detected_title": detected_title,
@@ -378,9 +391,11 @@ class ReportAnalysisService:
                     "parameters": ai_params,
                     "ai_analysis": {
                         "ai_provider": ai_data.get("ai_provider", "Google Gemini"),
+                        "primary_finding": primary_find,
+                        "what_report_tells": what_tells,
                         "summary_plain_en": ai_data.get("summary_plain_en", ""),
                         "clinical_notes": ai_data.get("clinical_notes", ""),
-                        "abnormal_count": ai_data.get("abnormal_count", 0),
+                        "abnormal_count": ai_data.get("abnormal_count", len(abnormal_list)),
                         "urgent_flags": ai_data.get("urgent_flags", "No critical alerts identified."),
                         "risk_level": ai_data.get("risk_level", "LOW"),
                         "recommendations": ai_data.get("recommendations", "")
@@ -427,6 +442,8 @@ class ReportAnalysisService:
             "Return ONLY valid JSON matching this exact structure without markdown backticks:\n"
             "{\n"
             '  "detected_title": "Accurate Medical Investigation Title (e.g. Urine Complete (Routine & Microscopy), Complete Blood Count (CBC), Comprehensive Lipid Profile, Liver Function Test (LFT), Kidney Function Test (KFT), etc.)",\n'
+            '  "primary_finding": "Short clinical headline (e.g. Urinary Tract Infection (UTI) Detected, Mild Anemia, Normal Healthy Profile, etc.)",\n'
+            '  "what_report_tells": "Direct 1-2 sentence core verdict in plain everyday language explaining exactly what this test report tells the patient (e.g. This report indicates a urinary tract infection due to elevated pus cells and bacteria, while kidney filtration markers are normal.)",\n'
             '  "lab_name": "Hospital or laboratory name if visible, else empty string",\n'
             '  "test_date": "Test date in YYYY-MM-DD if visible, else empty string",\n'
             '  "extracted_text": "Clean textual transcription of the test parameters, findings, and impressions",\n'
