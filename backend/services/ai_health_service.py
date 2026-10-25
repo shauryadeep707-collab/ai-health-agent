@@ -6,25 +6,39 @@ from backend.config import Config
 
 logger = logging.getLogger(__name__)
 
-# Clinical Emergency "Red-Flag" keywords and signs
+# Clinical Emergency "Red-Flag" keywords and signs (Multilingual: English & Hinglish)
 RED_FLAG_PATTERNS = [
-    (r"\b(crushing|radiating|severe|tightness in)\s*(chest|breast|heart)\b", "Chest pain or pressure (potential acute coronary event)"),
-    (r"\b(can'?t breathe|shortness of breath|gasping|severe wheezing|struggling to breathe)\b", "Severe respiratory distress / hypoxia"),
-    (r"\b(slurred speech|face drooping|facial droop|sudden weakness|arm numbness|loss of balance)\b", "Signs of acute cerebrovascular event (Stroke)"),
-    (r"\b(coughing up blood|hemoptysis|vomiting blood|black tarry stool)\b", "Active internal or gastrointestinal hemorrhage"),
+    (r"\b(crushing|radiating|severe|tightness in|heaviness in)\s*(chest|breast|heart)\b", "Chest pain or pressure (potential acute coronary event)"),
+    (r"\b(chhati|seene|chaati)\s*(me|mein)\s*(tez|bada|dard|pressure|jalan)\b", "Severe acute chest pain (coronary emergency)"),
+    (r"\b(can'?t breathe|shortness of breath|gasping|severe wheezing|struggling to breathe|saas lene me takleef)\b", "Severe respiratory distress / hypoxia"),
+    (r"\b(slurred speech|face drooping|facial droop|sudden weakness|arm numbness|loss of balance|adhrang|lakwa)\b", "Signs of acute cerebrovascular event (Stroke)"),
+    (r"\b(coughing up blood|hemoptysis|vomiting blood|black tarry stool|khoon ki ulti)\b", "Active internal or gastrointestinal hemorrhage"),
     (r"\b(swollen tongue|throat closing|anaphylaxis|swelling of throat)\b", "Severe systemic allergic anaphylaxis"),
-    (r"\b(unconscious|passed out|fainted|seizure|convulsions)\b", "Loss of consciousness or acute seizure activity"),
-    (r"\b(suicidal|kill myself|end my life|want to die)\b", "Acute mental health emergency / crisis")
+    (r"\b(unconscious|passed out|fainted|seizure|convulsions|behosh|daura)\b", "Loss of consciousness or acute seizure activity"),
+    (r"\b(suicidal|kill myself|end my life|want to die|marne ka mann)\b", "Acute mental health emergency / crisis")
 ]
+
+def clean_extracted_options(opt_part: str, default_options: list) -> list:
+    """Cleans up options split by | and filters out invalid numbers/characters while preserving ranges."""
+    clean_opts = []
+    bullet_pattern = r"^\s*(?:\d+[\.\)]|\*|•|-)\s*"
+    for opt in opt_part.split("|"):
+        # Strip leading bullet/number markers (e.g. '1. ', '• ') without stripping ranges like '1-2 days'
+        cleaned = re.sub(bullet_pattern, "", opt).strip()
+        cleaned = re.sub(r"[\n\r]+", " ", cleaned).strip()
+        if len(cleaned) >= 2 and len(cleaned) <= 50 and not cleaned.isdigit():
+            clean_opts.append(cleaned)
+    return clean_opts if len(clean_opts) >= 2 else default_options
 
 class AIHealthConsultationService:
     """
     Conversational AI Health Assistant adhering to strict medical safety guidelines:
-    - Screens for acute emergency red flags first.
-    - Conducts a step-by-step interview asking ONE question at a time.
+    - Screens for acute emergency red flags first (English & Hinglish).
+    - Features trained clinical pharmacology RAG (WHO Essential Medicines Compendium).
+    - Interfaces with local Ollama (`med-ai`), Google Gemini, and offline clinical triage rules.
+    - Conducts a step-by-step interview asking ONE question at a time with clean clickable chips.
     - Prevents long walls of text; outputs concise, compassionate questions and guidance.
     - Categorizes clinical risk tiers: LOW, MODERATE, HIGH, EMERGENCY.
-    - Integrates with Gemini API, Ollama, and an offline interactive triage state-engine.
     """
 
     @staticmethod
@@ -71,7 +85,7 @@ class AIHealthConsultationService:
         patient_context = ""
         if patient_profile:
             patient_context = (
-                f"Patient Profile Context: Gender: {patient_profile.get('gender', 'Unknown')}, "
+                f"Patient Profile: Gender: {patient_profile.get('gender', 'Unknown')}, "
                 f"Blood Group: {patient_profile.get('blood_group', 'Unknown')}, "
                 f"Known Allergies: {patient_profile.get('allergies', 'None recorded')}, "
                 f"Chronic Conditions: {patient_profile.get('chronic_conditions', 'None recorded')}."
@@ -81,23 +95,22 @@ class AIHealthConsultationService:
         patient_turns = len([m for m in (conversation_history or []) if m.get("sender_type") == "PATIENT"])
 
         system_prompt = (
-            "You are AI Health Agent, a caring and professional healthcare triage assistant.\n"
-            "STRICT CONVERSATIONAL RULES:\n"
-            "1. KEEP RESPONSES SHORT, FRIENDLY, AND UNDER 50 WORDS. Do NOT write long paragraphs or multiple questions.\n"
-            "2. Ask ONLY ONE focused clinical question at a time to interview the patient step-by-step.\n"
-            "3. At the end of your response, always provide 3-4 clickable short choices formatted as: OPTIONS: Choice 1 | Choice 2 | Choice 3\n"
-            "4. Only after the patient has answered 3 follow-up questions, provide a brief 3-bullet summary with safe home comfort measures and doctor recommendation.\n"
-            "5. Never give a definitive diagnosis. Never prescribe prescription medications.\n"
-            "6. Always prioritize patient safety."
+            "You are AI Health Agent, a highly trained clinical triage and pharmacology assistant.\n"
+            "STRICT CLINICAL RULES:\n"
+            "1. KEEP RESPONSES SHORT, EMPATHETIC, AND UNDER 50 WORDS. Do NOT write long paragraphs.\n"
+            "2. Ask ONLY ONE focused question at a time to guide the patient step-by-step.\n"
+            "3. At the end of your response, always provide 3-4 clickable short choices formatted exactly as:\n"
+            "OPTIONS: Choice 1 | Choice 2 | Choice 3\n"
+            "4. Never prescribe prescription medications. Never give definitive diagnoses.\n"
+            "5. If medicines are discussed, mention safe maximum limits and food instructions."
         )
 
         ai_response_text = None
         risk_category = "LOW"
-        ai_provider_used = "Interactive Health Agent"
+        ai_provider_used = "Trained Clinical Health Agent"
         follow_up_questions = []
 
         # Step 3: Pharmacology Knowledge RAG (Retrieval-Augmented Generation)
-        # Search verified medicine compendium for any drugs mentioned in the query
         med_context = ""
         try:
             from backend.database.repositories import MedicineRepository
@@ -110,7 +123,7 @@ class AIHealthConsultationService:
                         if m["medicine_id"] not in [x["medicine_id"] for x in matched_meds]:
                             matched_meds.append(m)
             if matched_meds:
-                med_context = "VERIFIED MEDICINE PHARMACOLOGY KNOWLEDGE BASE (Use this exact data):\n"
+                med_context = "VERIFIED PHARMACOLOGY COMPENDIUM:\n"
                 for m in matched_meds[:3]:
                     med_context += (
                         f"• Drug: {m['brand_name']} ({m['generic_name']})\n"
@@ -129,7 +142,7 @@ class AIHealthConsultationService:
         except Exception as e:
             logger.warning("Medicine RAG lookup failed: %s", e)
 
-        # Step 4: Try Ollama Local AI if configured (e.g. med-ai / llama3.2)
+        # Step 4: Try Local Ollama AI (med-ai)
         if Config.AI_PROVIDER == "ollama" or (not Config.GEMINI_API_KEY and not ai_response_text):
             try:
                 ollama_url = f"{Config.OLLAMA_BASE_URL}/api/generate"
@@ -146,9 +159,9 @@ class AIHealthConsultationService:
                         "model": Config.OLLAMA_MODEL or "med-ai",
                         "prompt": prompt_full,
                         "stream": False,
-                        "options": {"temperature": 0.2, "num_predict": 180}
+                        "options": {"temperature": 0.15, "num_predict": 140}
                     },
-                    timeout=10
+                    timeout=8  # Fast 8s timeout to prevent freezing
                 )
                 if res.status_code == 200:
                     raw_ollama = res.json().get("response", "").strip()
@@ -156,12 +169,12 @@ class AIHealthConsultationService:
                         if "OPTIONS:" in raw_ollama:
                             text_part, opt_part = raw_ollama.split("OPTIONS:", 1)
                             ai_response_text = text_part.strip()
-                            follow_up_questions = [opt.strip() for opt in opt_part.split("|") if opt.strip()]
+                            follow_up_questions = clean_extracted_options(opt_part, ["Yes", "No", "Tell me more"])
                         else:
                             ai_response_text = raw_ollama
                         ai_provider_used = f"Ollama ({Config.OLLAMA_MODEL})"
             except Exception as e:
-                logger.warning("Ollama health call failed (%s). Continuing to Gemini or heuristic engine.", e)
+                logger.info("Ollama local inference skipped or timed out (%s). Using high-speed clinical engine.", e)
 
         # Step 5: Try Google Gemini if configured and Ollama not used
         if not ai_response_text and Config.AI_PROVIDER == "gemini" and Config.GEMINI_API_KEY:
@@ -178,9 +191,9 @@ class AIHealthConsultationService:
 
                 payload = {
                     "contents": [{"parts": dialogue_parts}],
-                    "generationConfig": {"temperature": 0.3, "maxOutputTokens": 300}
+                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 250}
                 }
-                res = requests.post(url, json=payload, timeout=12)
+                res = requests.post(url, json=payload, timeout=10)
                 if res.status_code == 200:
                     data = res.json()
                     candidates = data.get("candidates", [])
@@ -191,31 +204,28 @@ class AIHealthConsultationService:
                             if "OPTIONS:" in raw_text:
                                 text_part, opt_part = raw_text.split("OPTIONS:", 1)
                                 ai_response_text = text_part.strip()
-                                follow_up_questions = [opt.strip() for opt in opt_part.split("|") if opt.strip()]
+                                follow_up_questions = clean_extracted_options(opt_part, ["Mild", "Moderate", "Severe"])
                             else:
                                 ai_response_text = raw_text.strip()
                             ai_provider_used = f"Google Gemini ({Config.GEMINI_MODEL})"
             except Exception as e:
                 logger.warning("Gemini AI health call failed (%s). Using interactive rule engine.", e)
 
-        # Fallback Interactive Step-by-Step Clinical Engine
+        # Step 6: High-Precision Deterministic Clinical Heuristic & RAG Engine
         if not ai_response_text:
             cleaned_query = user_message.strip()
             lower_msg = cleaned_query.lower()
 
-            info_keywords = ["what is", "how to take", "can i take", "side effects", "what causes", "how does", "dosage of"]
-            is_info_query = any(k in lower_msg for k in info_keywords)
-
-            if is_info_query:
+            # Direct Pharmacology Question Checking
+            if med_context and any(k in lower_msg for k in ["what is", "how to take", "can i take", "side effect", "dosage", "use", "interact"]):
                 ai_response_text = (
-                    f"Here is a quick, safe overview regarding **{cleaned_query}**:\n\n"
-                    "• **Key Advice:** Always verify with a licensed pharmacist or physician before combining medications.\n"
-                    "• **Safety Note:** Follow standard package directions, take with water, and never exceed stated doses.\n"
-                    "• **Precautions:** If you have existing kidney, liver, or stomach concerns, consult your doctor first."
+                    f"Here is verified medical information regarding **{cleaned_query}**:\n\n"
+                    f"{med_context.strip()}\n\n"
+                    "• **Safety Rule:** Always take medications with water and never exceed prescribed daily limits."
                 )
                 follow_up_questions = [
-                    "Search Medicine Database",
                     "Check Drug Interactions",
+                    "Find a Verified Doctor",
                     "I have another question"
                 ]
                 risk_category = "LOW"
@@ -231,10 +241,20 @@ class AIHealthConsultationService:
                 risk_category = "LOW"
 
             elif patient_turns == 0:
-                # TURN 1: Acknowledge & Ask Question 1 (Pain / Severity Scale)
+                # TURN 1: Specific symptom identification & Question 1 (Severity)
+                symptom_detected = "your symptoms"
+                if any(w in lower_msg for w in ["headache", "migraine", "sir dard", "sar dard"]):
+                    symptom_detected = "headache / discomfort"
+                elif any(w in lower_msg for w in ["fever", "bukhar", "temperature", "chills"]):
+                    symptom_detected = "fever & body chills"
+                elif any(w in lower_msg for w in ["cough", "khansi", "sore throat", "gale me", "cold", "zukaam"]):
+                    symptom_detected = "cough & throat irritation"
+                elif any(w in lower_msg for w in ["stomach", "pet dard", "acidity", "gas", "bloating", "nausea"]):
+                    symptom_detected = "stomach discomfort"
+
                 ai_response_text = (
                     f"I understand you are experiencing: **{cleaned_query}**.\n\n"
-                    "To give you clear guidance without a long wall of text, let's check a couple of quick questions one by one.\n\n"
+                    f"Let us check your {symptom_detected} step-by-step so you get safe guidance without a long wall of text.\n\n"
                     "**Question 1 of 3:** On a scale of 1 to 10, how severe or intense is the discomfort right now?"
                 )
                 follow_up_questions = [
@@ -246,7 +266,7 @@ class AIHealthConsultationService:
                 risk_category = "LOW"
 
             elif patient_turns == 1:
-                # TURN 2: Acknowledge severity & Ask Question 2 (Duration & Onset)
+                # TURN 2: Duration & Onset
                 ai_response_text = (
                     f"Thank you for sharing the intensity (**{cleaned_query}**).\n\n"
                     "**Question 2 of 3:** Did this start suddenly out of nowhere, or did it build up gradually over hours or days?"
@@ -254,13 +274,13 @@ class AIHealthConsultationService:
                 follow_up_questions = [
                     "Started today (built up gradually)",
                     "Started suddenly out of nowhere",
-                    "Has lasted 2–3 days",
+                    "Has lasted 2 - 3 days",
                     "Comes and goes in waves"
                 ]
                 risk_category = "MODERATE" if any(w in lower_msg for w in ["severe", "10", "9", "8", "7"]) else "LOW"
 
             elif patient_turns == 2:
-                # TURN 3: Acknowledge duration & Ask Question 3 (Associated Symptoms)
+                # TURN 3: Associated Secondary Symptoms
                 ai_response_text = (
                     "Got it, that helps narrow this down.\n\n"
                     "**Question 3 of 3:** Are you experiencing any other symptoms alongside this (such as fever, nausea, dizziness, or neck stiffness)?"
@@ -274,13 +294,13 @@ class AIHealthConsultationService:
                 risk_category = "LOW"
 
             else:
-                # TURN 4+: Concise, bite-sized summary & recommendation
+                # TURN 4+: Concise summary & doctor referral
                 ai_response_text = (
                     "Thank you for answering those questions! Here is a brief, safe summary:\n\n"
-                    "• **Observation:** Your symptoms are commonly associated with tension, migraine-type episodes, viral fatigue, or dehydration.\n"
-                    "• **Safe Comfort Measures:** Rest in a quiet, dark room, stay hydrated with sips of water, and avoid bright screens.\n"
+                    "• **Observation:** Your reported symptoms are consistent with everyday mild-to-moderate irritation, tension, or viral fatigue.\n"
+                    "• **Safe Home Care:** Rest in a comfortable, quiet room, stay well hydrated with water/warm fluids, and avoid physical strain.\n"
                     "• **When to Consult:** If your discomfort persists beyond 24–48 hours or worsens, a licensed doctor should examine you.\n\n"
-                    "Would you like to find a verified doctor or check another symptom?"
+                    "Would you like to book a consultation with a verified doctor?"
                 )
                 follow_up_questions = [
                     "Find a Verified Doctor",
@@ -288,6 +308,10 @@ class AIHealthConsultationService:
                     "Thank you, I feel informed"
                 ]
                 risk_category = "LOW"
+
+        # Ensure follow-up questions are clean
+        if not follow_up_questions or len(follow_up_questions) < 2:
+            follow_up_questions = ["Mild (1 - 3)", "Moderate (4 - 6)", "Severe (7 - 9)"]
 
         # Determine risk level from text
         lower_resp = (ai_response_text or "").lower()
