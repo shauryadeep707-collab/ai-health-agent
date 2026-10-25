@@ -211,11 +211,4 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     CONSTRAINT chk_log_status CHECK (event_status IN ('SUCCESS', 'FAILURE', 'WARNING', 'ALERT'))
 );
 
--- 15. DEFAULT SEED USER (Shaurya Deep)
-INSERT INTO users (user_id, email, password_hash, role, full_name, phone_number, is_active)
-VALUES ('u-pat-002', 'shauryadeep707@gmail.com', '$2b$10$K9ZmQi9b.oWDyKh5ytB.pO6X9nBSgiRdTqAh7Y5hHXNbpY.s7c/ge', 'PATIENT', 'Shaurya Deep', '+919876543299', 1)
-ON CONFLICT (email) DO NOTHING;
 
-INSERT INTO patient_profiles (patient_id, user_id, date_of_birth, gender, blood_group, emergency_contact, allergies, chronic_conditions)
-VALUES ('pp-002', 'u-pat-002', '2002-01-01', 'MALE', 'O+', '+919876543299', 'None', 'None')
-ON CONFLICT (user_id) DO NOTHING;

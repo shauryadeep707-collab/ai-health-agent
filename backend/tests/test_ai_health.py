@@ -18,6 +18,34 @@ def app():
     app.config["TESTING"] = True
     return app
 
+@pytest.fixture(autouse=True, scope="session")
+def setup_test_fixtures():
+    db_manager.execute_query(
+        "INSERT OR IGNORE INTO users (user_id, email, password_hash, role, full_name, phone_number, is_active) "
+        "VALUES ('u-doc-001', 'dr.priya.sharma@hospital.org', '$2b$10$K9ZmQi9b.oWDyKh5ytB.pO6X9nBSgiRdTqAh7Y5hHXNbpY.s7c/ge', 'DOCTOR', 'Dr. Priya Sharma', '+919876543210', 1)"
+    )
+    db_manager.execute_query(
+        "INSERT OR IGNORE INTO doctor_profiles (doctor_id, user_id, medical_qualification, registration_number, registration_council, jurisdiction, specialty, experience_years, clinic_address, consultation_fee, verification_status) "
+        "VALUES ('dp-001', 'u-doc-001', 'MBBS, MD', 'MCI-1998-04281', 'Maharashtra Medical Council', 'Maharashtra, India', 'Cardiology', 16, 'Mumbai', 1200, 'VERIFIED')"
+    )
+    db_manager.execute_query(
+        "INSERT OR IGNORE INTO users (user_id, email, password_hash, role, full_name, phone_number, is_active) "
+        "VALUES ('u-doc-003', 'dr.anita.deshmukh@medcare.org', '$2b$10$K9ZmQi9b.oWDyKh5ytB.pO6X9nBSgiRdTqAh7Y5hHXNbpY.s7c/ge', 'DOCTOR', 'Dr. Anita Deshmukh', '+919876543212', 1)"
+    )
+    db_manager.execute_query(
+        "INSERT OR IGNORE INTO doctor_profiles (doctor_id, user_id, medical_qualification, registration_number, registration_council, jurisdiction, specialty, experience_years, clinic_address, consultation_fee, verification_status) "
+        "VALUES ('dp-003', 'u-doc-003', 'MBBS', 'KMC-2015-77210', 'Karnataka Medical Council', 'Karnataka, India', 'General Medicine', 7, 'Bengaluru', 600, 'PENDING')"
+    )
+    db_manager.execute_query(
+        "INSERT OR IGNORE INTO users (user_id, email, password_hash, role, full_name, phone_number, is_active) "
+        "VALUES ('u-pat-001', 'rahul.mehta@email.com', '$2b$10$K9ZmQi9b.oWDyKh5ytB.pO6X9nBSgiRdTqAh7Y5hHXNbpY.s7c/ge', 'PATIENT', 'Rahul Mehta', '+919820011223', 1)"
+    )
+    db_manager.execute_query(
+        "INSERT OR IGNORE INTO patient_profiles (patient_id, user_id, date_of_birth, gender, blood_group, emergency_contact, allergies, chronic_conditions) "
+        "VALUES ('pp-001', 'u-pat-001', '1988-06-15', 'MALE', 'B+', '+919820099887', 'Penicillin', 'Mild Hypertension')"
+    )
+    yield
+
 @pytest.fixture
 def client(app):
     return app.test_client()
