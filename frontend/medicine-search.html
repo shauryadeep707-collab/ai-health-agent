@@ -134,13 +134,21 @@
               </div>
 
               ${m.pharmacy_links && m.pharmacy_links.length > 0 ? `
-                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-                  <span style="font-size:0.8rem; font-weight:600; color:var(--slate-600);">Legitimate Pharmacy Partners:</span>
-                  ${m.pharmacy_links.map(l => `
-                    <a href="${l.url}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="font-size:0.75rem;">
-                      🛒 ${l.store} ↗
-                    </a>
-                  `).join("")}
+                <div style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid #e2e8f0;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem; flex-wrap:wrap; gap:0.25rem;">
+                    <span style="font-size:0.85rem; font-weight:700; color:var(--dark);">
+                      🛒 Order Online (10-Min & Verified Delivery):
+                    </span>
+                    <span style="font-size:0.75rem; color:var(--slate-500);">Direct 1-Click Search</span>
+                  </div>
+                  <div style="display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">
+                    ${m.pharmacy_links.map(l => `
+                      <a href="${l.url}" target="_blank" rel="noopener" class="btn btn-sm" 
+                         style="background:${l.color || '#f1f5f9'}; color:${l.textColor || '#0f172a'}; font-weight:700; border:1px solid #e2e8f0; font-size:0.75rem; padding:0.35rem 0.65rem; border-radius:6px; display:inline-flex; align-items:center; gap:0.25rem; text-decoration:none;">
+                        ${l.store} ↗
+                      </a>
+                    `).join("")}
+                  </div>
                 </div>
               ` : ''}
             </div>
