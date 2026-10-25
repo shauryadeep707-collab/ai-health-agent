@@ -87,7 +87,13 @@ def upload_medical_report():
         return jsonify({"success": False, "error": err_msg}), 400
 
     raw_user_type = request.form.get("test_type", "").strip()
-    user_test_type = sanitize_input(raw_user_type) if raw_user_type and raw_user_type != "Comprehensive Diagnostic Report" else ""
+    GENERIC_LABELS = {
+        "", "general lab report", "general diagnostic lab report",
+        "comprehensive diagnostic report", "diagnostic lab report",
+        "diagnostic report", "✨ auto-detect test title from document",
+        "✨ auto-detect investigation title from document"
+    }
+    user_test_type = "" if raw_user_type.lower() in GENERIC_LABELS else sanitize_input(raw_user_type)
     report_date = request.form.get("report_date", "").strip() or None
 
     # Secure storage

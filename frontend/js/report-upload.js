@@ -58,7 +58,8 @@ const ReportUpload = {
       return;
     }
 
-    const testType = document.getElementById("report-test-type")?.value || "General Lab Report";
+    const testTypeSelect = document.getElementById("report-test-type");
+    const testType = testTypeSelect ? testTypeSelect.value.trim() : "";
     const reportDate = document.getElementById("report-test-date")?.value || "";
 
     const formData = new FormData();

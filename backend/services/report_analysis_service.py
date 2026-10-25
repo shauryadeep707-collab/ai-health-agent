@@ -293,6 +293,13 @@ class ReportAnalysisService:
         if not is_image:
             extracted_text = cls.extract_text_from_file(file_path, file_type)
 
+        GENERIC_LABELS = {
+            "", "general lab report", "general diagnostic lab report",
+            "comprehensive diagnostic report", "diagnostic lab report",
+            "diagnostic report", "✨ auto-detect test title from document",
+            "✨ auto-detect investigation title from document"
+        }
+
         # -------------------------------------------------------------
         # STEP 1: Attempt Multimodal AI Extraction (Gemini)
         # -------------------------------------------------------------
@@ -305,7 +312,13 @@ class ReportAnalysisService:
                 original_filename=original_filename
             )
             if ai_data:
-                detected_title = user_test_type or ai_data.get("detected_title") or cls.extract_report_title(extracted_text)
+                ai_title = ai_data.get("detected_title", "").strip()
+                # Prioritize genuine AI-detected clinical title over generic placeholders
+                if user_test_type.strip().lower() in GENERIC_LABELS:
+                    detected_title = ai_title or cls.extract_report_title(extracted_text) or "Diagnostic Lab Report"
+                else:
+                    detected_title = user_test_type or ai_title or cls.extract_report_title(extracted_text) or "Diagnostic Lab Report"
+
                 detected_date = user_report_date or ai_data.get("test_date") or cls.extract_report_date(extracted_text)
                 return {
                     "detected_title": detected_title,
@@ -327,7 +340,11 @@ class ReportAnalysisService:
         # -------------------------------------------------------------
         # STEP 2: Rule-Based Fallback Engine (Offline / Local)
         # -------------------------------------------------------------
-        detected_title = user_test_type or cls.extract_report_title(extracted_text) or "Diagnostic Lab Report"
+        if user_test_type.strip().lower() in GENERIC_LABELS:
+            detected_title = cls.extract_report_title(extracted_text) or "Diagnostic Lab Report"
+        else:
+            detected_title = user_test_type or cls.extract_report_title(extracted_text) or "Diagnostic Lab Report"
+
         detected_date = user_report_date or cls.extract_report_date(extracted_text) or None
         test_values = cls.parse_lab_parameters(extracted_text)
         explanation = cls.generate_ai_explanation(test_values, original_filename)
@@ -387,56 +404,91 @@ class ReportAnalysisService:
 
         if is_image:
             try:
-                mime = "image/jpeg"
-                if "png" in file_type.lower() or file_path.lower().endswith(".png"):
-                    mime = "image/png"
-                elif "webp" in file_type.lower() or file_path.lower().endswith(".webp"):
-                    mime = "image/webp"
+                import io
+                from PIL import Image, ImageOps
 
-                with open(file_path, "rb") as f:
-                    b64_content = base64.b64encode(f.read()).decode("utf-8")
-                parts.append({"inline_data": {"mime_type": mime, "data": b64_content}})
+                with Image.open(file_path) as im:
+                    im = ImageOps.exif_transpose(im)
+                    im = im.convert("RGB")
+                    im.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
+                    buf = io.BytesIO()
+                    im.save(buf, format="JPEG", quality=85, optimize=True)
+                    opt_bytes = buf.getvalue()
+
+                b64_content = base64.b64encode(opt_bytes).decode("utf-8")
+                parts.append({"inline_data": {"mime_type": "image/jpeg", "data": b64_content}})
             except Exception as e:
-                logger.warning("Could not read image file for Gemini: %s", e)
-                return None
+                logger.warning("PIL image optimization failed (%s), reading raw file bytes.", e)
+                try:
+                    with open(file_path, "rb") as f:
+                        b64_content = base64.b64encode(f.read()).decode("utf-8")
+                    parts.append({"inline_data": {"mime_type": "image/jpeg", "data": b64_content}})
+                except Exception as ex:
+                    logger.warning("Could not read image file for Gemini: %s", ex)
+                    return None
         else:
             if not pdf_text:
                 return None
             parts.append({"text": f"Document Filename: {original_filename}\nReport Text Content:\n{pdf_text}"})
 
-        # Try models in fallback order
+        # Try models in fallback order with retry on transient 503 spikes
         for model in FALLBACK_GEMINI_MODELS:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={Config.GEMINI_API_KEY}"
             payload = {
                 "contents": [{"parts": parts}],
                 "generationConfig": {"temperature": 0.1, "response_mime_type": "application/json"}
             }
-            try:
-                res = requests.post(url, json=payload, timeout=25)
-                if res.status_code == 200:
-                    data = res.json()
-                    candidates = data.get("candidates", [])
-                    if candidates and "content" in candidates[0]:
-                        c_parts = candidates[0]["content"].get("parts", [])
-                        if c_parts:
-                            raw_json = c_parts[0].get("text", "").strip()
-                            # Clean possible code fence
-                            raw_json = re.sub(r"^```(?:json)?", "", raw_json).rstrip("`").strip()
-                            parsed = json.loads(raw_json)
-                            parsed["ai_provider"] = f"Google Gemini ({model})"
+            import time
+            for attempt in range(2):
+                try:
+                    res = requests.post(url, json=payload, timeout=20)
+                    if res.status_code == 200:
+                        data = res.json()
+                        candidates = data.get("candidates", [])
+                        if candidates and "content" in candidates[0]:
+                            c_parts = candidates[0]["content"].get("parts", [])
+                            if c_parts:
+                                raw_json = c_parts[0].get("text", "").strip()
+                                # Clean possible code fence
+                                raw_json = re.sub(r"^```(?:json)?", "", raw_json).rstrip("`").strip()
+                                parsed = json.loads(raw_json)
+                                if isinstance(parsed, list) and len(parsed) > 0 and isinstance(parsed[0], dict):
+                                    parsed = parsed[0]
+                                parsed["ai_provider"] = f"Google Gemini ({model})"
 
-                            # Ensure numerical values match schema
-                            for param in parsed.get("parameters", []):
-                                if param.get("measured_value") is not None:
-                                    try:
-                                        param["measured_value"] = float(param["measured_value"])
-                                    except Exception:
-                                        param["measured_value"] = None
-                            return parsed
-                else:
-                    logger.warning("Gemini model %s returned status %s: %s", model, res.status_code, res.text[:200])
-            except Exception as e:
-                logger.warning("Gemini model %s exception: %s", model, e)
+                                # Clean parameters
+                                clean_params = []
+                                for param in parsed.get("parameters", []):
+                                    if isinstance(param, dict):
+                                        if param.get("measured_value") is not None:
+                                            try:
+                                                param["measured_value"] = float(param["measured_value"])
+                                            except Exception:
+                                                param["measured_value"] = None
+                                        clean_params.append(param)
+                                    elif isinstance(param, str) and param.strip():
+                                        # Handle string parameter gracefully
+                                        name = param.split(":")[0].strip() if ":" in param else param.strip()
+                                        clean_params.append({
+                                            "parameter_name": name,
+                                            "measured_value": None,
+                                            "measured_text": param,
+                                            "unit": "",
+                                            "ref_range_text": "",
+                                            "flag": "HIGH" if any(w in param.lower() for w in ("high", "critical", "positive", "1+", "2+", "3+")) else "NORMAL"
+                                        })
+                                parsed["parameters"] = clean_params
+                                return parsed
+                    elif res.status_code == 503 and attempt == 0:
+                        logger.info("Gemini model %s 503, pausing 1.2s before retry...", model)
+                        time.sleep(1.2)
+                        continue
+                    else:
+                        logger.warning("Gemini model %s returned status %s: %s", model, res.status_code, res.text[:200])
+                        break
+                except Exception as e:
+                    logger.warning("Gemini model %s attempt %d exception: %s", model, attempt, e)
+                    break
 
         return None
 
