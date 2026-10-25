@@ -1,4 +1,5 @@
 import os
+import re
 import sqlite3
 import logging
 from contextlib import contextmanager
@@ -13,21 +14,53 @@ try:
     ORACLE_AVAILABLE = True
 except ImportError:
     ORACLE_AVAILABLE = False
-    logger.warning("oracledb module not installed. Running in SQLite mode only.")
+    logger.warning("oracledb module not installed. Running in SQLite/Postgres mode.")
+
+# Check if psycopg2 (PostgreSQL / Supabase) is available
+try:
+    import psycopg2
+    import psycopg2.extras
+    import psycopg2.pool
+    POSTGRES_AVAILABLE = True
+except ImportError:
+    POSTGRES_AVAILABLE = False
+    logger.warning("psycopg2 module not installed.")
 
 class DatabaseManager:
     """
-    Manages database connections for Oracle Database and SQLite local fallback.
+    Manages database connections for Supabase / PostgreSQL, Oracle Database, and SQLite local fallback.
     Provides uniform execution with named parameter binding (:param_name).
     """
     def __init__(self, config=None):
         self.config = config or Config
         self.db_type = self.config.DB_TYPE
         self.oracle_pool = None
+        self.pg_pool = None
         self._init_backend()
 
     def _init_backend(self):
-        if self.db_type == "oracle":
+        if self.db_type in ("postgres", "postgresql", "supabase"):
+            if not POSTGRES_AVAILABLE:
+                logger.error("Supabase/PostgreSQL configured but psycopg2 is not installed. Falling back to SQLite.")
+                self.db_type = "sqlite"
+                self._init_sqlite()
+                return
+
+            try:
+                conn_str = getattr(self.config, "SUPABASE_DB_URL", "") or os.getenv("DATABASE_URL", "")
+                if not conn_str:
+                    logger.warning("SUPABASE_DB_URL not set in .env. Falling back to SQLite.")
+                    self.db_type = "sqlite"
+                    self._init_sqlite()
+                    return
+                self.pg_pool = psycopg2.pool.SimpleConnectionPool(1, 10, conn_str)
+                logger.info("Successfully connected to Supabase / PostgreSQL database.")
+            except Exception as e:
+                logger.warning("Failed to connect to Supabase/PostgreSQL (%s). Falling back to SQLite.", e)
+                self.db_type = "sqlite"
+                self._init_sqlite()
+
+        elif self.db_type == "oracle":
             if not ORACLE_AVAILABLE:
                 logger.error("Oracle database configured but python-oracledb is not installed. Falling back to SQLite.")
                 self.db_type = "sqlite"
@@ -459,7 +492,17 @@ class DatabaseManager:
     @contextmanager
     def get_connection(self):
         """Context manager yielding a database connection."""
-        if self.db_type == "oracle" and self.oracle_pool:
+        if self.db_type in ("postgres", "postgresql", "supabase") and self.pg_pool:
+            conn = self.pg_pool.getconn()
+            try:
+                yield conn
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+            finally:
+                self.pg_pool.putconn(conn)
+        elif self.db_type == "oracle" and self.oracle_pool:
             conn = self.oracle_pool.acquire()
             try:
                 yield conn
@@ -481,9 +524,24 @@ class DatabaseManager:
     def execute_query(self, query, params=None, fetchone=False, fetchall=False):
         """
         Executes query safely using named parameters (:param_name).
-        Works seamlessly on both Oracle and SQLite.
+        Works seamlessly on Supabase/PostgreSQL, Oracle, and SQLite.
         """
         params = params or {}
+
+        # Handle Supabase / PostgreSQL query translation
+        if self.db_type in ("postgres", "postgresql", "supabase"):
+            pg_query = re.sub(r':([a-zA-Z0-9_]+)', r'%(\1)s', query)
+            with self.get_connection() as conn:
+                cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                cursor.execute(pg_query, params)
+                if fetchone:
+                    res = cursor.fetchone()
+                    return dict(res) if res else None
+                if fetchall:
+                    rows = cursor.fetchall()
+                    return [dict(r) for r in rows]
+                return cursor.rowcount
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, params)

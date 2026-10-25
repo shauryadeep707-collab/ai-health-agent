@@ -23,6 +23,10 @@ VALUES ('u-doc-003', 'dr.anita.deshmukh@medcare.org', '$2b$10$K9ZmQi9b.oWDyKh5yt
 INSERT INTO USERS (user_id, email, password_hash, role, full_name, phone_number, is_active, created_at)
 VALUES ('u-pat-001', 'rahul.mehta@email.com', '$2b$10$K9ZmQi9b.oWDyKh5ytB.pO6X9nBSgiRdTqAh7Y5hHXNbpY.s7c/ge', 'PATIENT', 'Rahul Mehta', '+919820011223', 1, CURRENT_TIMESTAMP);
 
+-- Patient 2: Shaurya Deep
+INSERT INTO USERS (user_id, email, password_hash, role, full_name, phone_number, is_active, created_at)
+VALUES ('u-pat-002', 'shauryadeep707@gmail.com', '$2b$10$K9ZmQi9b.oWDyKh5ytB.pO6X9nBSgiRdTqAh7Y5hHXNbpY.s7c/ge', 'PATIENT', 'Shaurya Deep', '+919876543299', 1, CURRENT_TIMESTAMP);
+
 -- -----------------------------------------------------------------------------
 -- DOCTOR PROFILES SEED
 -- -----------------------------------------------------------------------------
@@ -49,6 +53,9 @@ VALUES ('dv-002', 'dp-002', 'DIGILOCKER', 'state_seed_002', 'DL-TXN-2026-88143',
 -- -----------------------------------------------------------------------------
 INSERT INTO PATIENT_PROFILES (patient_id, user_id, date_of_birth, gender, blood_group, emergency_contact, allergies, chronic_conditions)
 VALUES ('pp-001', 'u-pat-001', TO_DATE('1988-06-15', 'YYYY-MM-DD'), 'MALE', 'B+', '+919820099887 (Spouse)', 'Penicillin', 'Mild Hypertension');
+
+INSERT INTO PATIENT_PROFILES (patient_id, user_id, date_of_birth, gender, blood_group, emergency_contact, allergies, chronic_conditions)
+VALUES ('pp-002', 'u-pat-002', TO_DATE('2002-01-01', 'YYYY-MM-DD'), 'MALE', 'O+', '+919876543299', 'None', 'None');
 
 -- -----------------------------------------------------------------------------
 -- USER CONSENTS SEED

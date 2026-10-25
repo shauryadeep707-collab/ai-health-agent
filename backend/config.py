@@ -18,6 +18,7 @@ class Config:
 
     # Database
     DB_TYPE = os.getenv("DB_TYPE", "sqlite").lower()
+    SUPABASE_DB_URL = os.getenv("SUPABASE_DB_URL", "")
     SQLITE_DB_PATH = BASE_DIR / os.getenv("SQLITE_DB_PATH", "database/ai_health.db")
     ORACLE_USER = os.getenv("ORACLE_USER", "ai_health_user")
     ORACLE_PASSWORD = os.getenv("ORACLE_PASSWORD", "")
