@@ -108,11 +108,6 @@ const ReportUpload = {
     const reportDate = data.report_date ? data.report_date.split('T')[0] : "";
 
     const hasValues = values.length > 0;
-    const abnormalValues = values.filter(v => v.flag === "HIGH" || v.flag === "LOW" || v.flag === "CRITICAL");
-    const isAbnormal = abnormalValues.length > 0;
-
-    const primaryFinding = analysis.primary_finding || (isAbnormal ? `${abnormalValues.length} Parameter(s) Out of Range` : "All Parameters Within Normal Range");
-    const whatReportTells = analysis.what_report_tells || analysis.summary_plain_en || "Report analyzed successfully.";
 
     let tableRows = values.map(v => {
       let badgeClass = "badge-verified";
@@ -133,14 +128,12 @@ const ReportUpload = {
     }).join("");
 
     container.innerHTML = `
-      <div class="panel" style="border-top: 5px solid ${isAbnormal ? '#ef4444' : 'var(--primary)'}; box-shadow:0 6px 20px rgba(0,0,0,0.08);">
-        
-        <!-- HEADER: REPORT TITLE & METADATA -->
-        <div class="panel-header" style="flex-wrap:wrap; gap:1rem; align-items:flex-start; border-bottom:1px solid #f1f5f9; padding-bottom:1rem; margin-bottom:1.25rem;">
+      <div class="panel" style="border-top: 4px solid var(--primary); box-shadow:0 4px 14px rgba(0,0,0,0.06);">
+        <div class="panel-header" style="flex-wrap:wrap; gap:1rem; align-items:flex-start;">
           <div>
-            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.4rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.35rem;">
               <span class="badge" style="background:#e0f2fe; color:#0284c7; font-weight:700; font-size:0.85rem; border:1px solid #bae6fd;">
-                🏷️ Test Report
+                🏷️ Pathology Test
               </span>
               ${reportDate ? `
                 <span class="badge" style="background:#f1f5f9; color:#475569; font-weight:600; font-size:0.8rem;">
@@ -148,20 +141,20 @@ const ReportUpload = {
                 </span>
               ` : ''}
               <span class="badge" style="background:#f8fafc; color:#64748b; font-size:0.8rem; border:1px solid #e2e8f0;">
-                🤖 ${analysis.ai_provider || 'Clinical AI Engine'}
+                🤖 ${analysis.ai_provider || 'Clinical Engine'}
               </span>
             </div>
-            <h2 style="font-size:1.5rem; font-weight:800; color:var(--dark); margin:0.25rem 0 0.35rem;">
+            <h3 class="panel-title" style="font-size:1.35rem; font-weight:800; color:var(--dark); margin:0.25rem 0 0.35rem;">
               🔬 ${reportTitle}
-            </h2>
+            </h3>
             <div style="font-size:0.85rem; color:var(--slate-500);">
-              📄 <em>Source Document:</em> ${data.original_filename || 'Uploaded File'}
+              📄 <em>Source Document:</em> ${data.original_filename}
             </div>
           </div>
           <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
             ${data.report_id ? `
               <button onclick="ReportUpload.openOriginalFile('${data.report_id}')" class="btn btn-outline btn-sm" style="display:inline-flex; align-items:center; gap:0.35rem;">
-                👁️ View Original Image
+                👁️ View Original Report Image
               </button>
             ` : ''}
             ${hasValues && data.report_id ? `
@@ -172,93 +165,40 @@ const ReportUpload = {
           </div>
         </div>
 
-        <!-- PART 1: CORE INSIGHTS - WHAT THIS REPORT TELLS YOU -->
-        <div style="background: linear-gradient(to bottom right, #f8fafc, #f1f5f9); border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.25rem; margin-bottom: 1.5rem;">
-          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
-            <h3 style="font-size:1.15rem; font-weight:800; color:var(--dark); margin:0; display:flex; align-items:center; gap:0.4rem;">
-              💡 What This Report Tells You (Key Findings)
-            </h3>
-            <span class="badge ${isAbnormal ? 'badge-rejected' : 'badge-verified'}" style="font-size:0.85rem; padding:0.3rem 0.65rem;">
-              ${primaryFinding}
-            </span>
-          </div>
-
-          <div style="background:#ffffff; border-radius:8px; padding:1rem; border-left:4px solid ${isAbnormal ? '#ef4444' : 'var(--success)'}; margin-bottom:1rem; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-            <div style="font-size:0.85rem; font-weight:700; text-transform:uppercase; color:var(--slate-500); margin-bottom:0.25rem;">
-              Core Takeaway:
-            </div>
-            <p style="font-size:1rem; color:var(--dark); line-height:1.55; margin:0; font-weight:500;">
-              ${whatReportTells}
-            </p>
-          </div>
-
-          ${isAbnormal ? `
-            <div style="margin-bottom:1rem;">
-              <div style="font-size:0.85rem; font-weight:700; color:#dc2626; margin-bottom:0.4rem;">
-                ⚠️ Parameters Requiring Attention (${abnormalValues.length}):
-              </div>
-              <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
-                ${abnormalValues.map(v => `
-                  <div style="background:#fee2e2; border:1px solid #fca5a5; border-radius:6px; padding:0.35rem 0.65rem; font-size:0.85rem; color:#991b1b;">
-                    <strong>${v.parameter_name}:</strong> ${v.measured_text || v.measured_value} ${v.unit || ''} 
-                    <span style="font-weight:700; text-transform:uppercase; font-size:0.75rem;">(${v.flag})</span>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          ` : ''}
-
-          ${analysis.summary_plain_en && analysis.summary_plain_en !== whatReportTells ? `
-            <div style="font-size:0.9rem; color:var(--slate-700); line-height:1.55; margin-bottom:0.75rem; white-space:pre-line;">
-              ${analysis.summary_plain_en.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}
-            </div>
-          ` : ''}
-
-          ${analysis.recommendations ? `
-            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:0.75rem 1rem; font-size:0.88rem; color:#1e40af;">
-              🩺 <strong>Recommended Next Steps:</strong>
-              <div style="margin-top:0.25rem; white-space:pre-line;">${analysis.recommendations}</div>
-            </div>
-          ` : ''}
+        ${hasValues ? `
+        <div class="table-responsive" style="margin-bottom:1.5rem;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Parameter Name</th>
+                <th>Measured Value</th>
+                <th>Standard Reference Interval</th>
+                <th>Status Flag</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
         </div>
+        ` : `
+        <div class="alert alert-warning" style="margin-bottom:1.5rem;">
+          ⚠️ <strong>Non-Diagnostic or Unreadable Document:</strong> No clinical laboratory values were detected in this image. Please upload a clear digital PDF or sharp photo of a genuine pathology test report.
+        </div>
+        `}
 
-        <!-- PART 2: ALL EXTRACTED LAB INFORMATION (FULL TABLE) -->
-        <div style="margin-bottom: 1.5rem;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-            <h3 style="font-size:1.15rem; font-weight:800; color:var(--dark); margin:0;">
-              📋 All Extracted Laboratory Information (${values.length} Parameters)
-            </h3>
-            <span style="font-size:0.8rem; color:var(--slate-500);">
-              Full quantitative & qualitative extraction
-            </span>
-          </div>
-
-          ${hasValues ? `
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Parameter Name</th>
-                  <th>Measured Value</th>
-                  <th>Standard Reference Range</th>
-                  <th>Status Flag</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${tableRows}
-              </tbody>
-            </table>
-          </div>
-          ` : `
-          <div class="alert alert-warning">
-            ⚠️ <strong>No Laboratory Values Detected:</strong> Please ensure the uploaded file contains a legible pathology or diagnostic lab report.
-          </div>
-          `}
+        <div style="background-color:var(--slate-100); border-radius:var(--radius-md); padding:1.25rem; margin-bottom:1.25rem;">
+          <h4 style="font-size:1.05rem; font-weight:700; color:var(--dark); margin-bottom:0.5rem;">
+            🤖 AI Plain English Explanation
+          </h4>
+          <p style="white-space:pre-line; line-height:1.6; font-size:0.95rem; color:var(--slate-700);">
+            ${analysis.summary_plain_en}
+          </p>
         </div>
 
         ${analysis.urgent_flags ? `
           <div class="alert alert-warning" style="margin-bottom:1rem;">
-            ⚠️ <strong>Clinical Alert Note:</strong> ${analysis.urgent_flags}
+            ⚠️ <strong>Clinical Note:</strong> ${analysis.urgent_flags}
           </div>
         ` : ''}
 
