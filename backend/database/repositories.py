@@ -348,6 +348,63 @@ class MedicalReportRepository:
         db_manager.execute_query(query, {"confirmed": is_confirmed, "report_id": report_id})
 
     @staticmethod
+    def delete_report(report_id):
+        """Deletes a report and cascades deletion to analysis and test values."""
+        query = "DELETE FROM MEDICAL_REPORTS WHERE report_id = :report_id"
+        return db_manager.execute_query(query, {"report_id": report_id})
+
+    @staticmethod
+    def update_report_metadata(report_id, test_type=None, report_date=None, ocr_raw_text=None):
+        updates = []
+        params = {"report_id": report_id}
+        if test_type is not None:
+            updates.append("test_type = :test_type")
+            params["test_type"] = test_type
+        if report_date is not None:
+            updates.append("report_date = :report_date")
+            params["report_date"] = report_date
+        if ocr_raw_text is not None:
+            updates.append("ocr_raw_text = :ocr_raw_text")
+            params["ocr_raw_text"] = ocr_raw_text
+        if updates:
+            sql = f"UPDATE MEDICAL_REPORTS SET {', '.join(updates)} WHERE report_id = :report_id"
+            db_manager.execute_query(sql, params)
+
+    @staticmethod
+    def update_or_save_analysis(report_id, ai_provider, summary_plain_en, clinical_notes="", abnormal_count=0, urgent_flags="", risk_level="LOW", recommendations=""):
+        existing = MedicalReportRepository.get_analysis(report_id)
+        if existing:
+            query = """
+            UPDATE REPORT_ANALYSES
+            SET ai_provider = :ai_provider, summary_plain_en = :summary_plain_en,
+                clinical_notes = :clinical_notes, abnormal_count = :abnormal_count,
+                urgent_flags = :urgent_flags, risk_level = :risk_level, recommendations = :recommendations
+            WHERE report_id = :report_id
+            """
+            db_manager.execute_query(query, {
+                "report_id": report_id,
+                "ai_provider": ai_provider,
+                "summary_plain_en": summary_plain_en,
+                "clinical_notes": clinical_notes,
+                "abnormal_count": abnormal_count,
+                "urgent_flags": urgent_flags,
+                "risk_level": risk_level,
+                "recommendations": recommendations
+            })
+            return existing.get("analysis_id")
+        else:
+            return MedicalReportRepository.save_analysis(
+                report_id=report_id,
+                ai_provider=ai_provider,
+                summary_plain_en=summary_plain_en,
+                clinical_notes=clinical_notes,
+                abnormal_count=abnormal_count,
+                urgent_flags=urgent_flags,
+                risk_level=risk_level,
+                recommendations=recommendations
+            )
+
+    @staticmethod
     def save_analysis(report_id, ai_provider, summary_plain_en, clinical_notes="", abnormal_count=0, urgent_flags="", risk_level="LOW", recommendations=""):
         analysis_id = f"ana-{uuid.uuid4().hex[:12]}"
         query = """
@@ -372,6 +429,11 @@ class MedicalReportRepository:
     def get_analysis(report_id):
         query = "SELECT * FROM REPORT_ANALYSES WHERE report_id = :report_id"
         return db_manager.execute_query(query, {"report_id": report_id}, fetchone=True)
+
+    @staticmethod
+    def clear_test_values(report_id):
+        query = "DELETE FROM REPORT_TEST_VALUES WHERE report_id = :report_id"
+        return db_manager.execute_query(query, {"report_id": report_id})
 
     @staticmethod
     def save_test_values(report_id, values):

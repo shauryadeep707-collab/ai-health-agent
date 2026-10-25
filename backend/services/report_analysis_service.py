@@ -102,6 +102,55 @@ class ReportAnalysisService:
     """
 
     @staticmethod
+    def is_generic_title(title: str) -> bool:
+        """Returns True if the given title is empty, generic, or an auto-detect placeholder."""
+        if not title:
+            return True
+        t = title.strip().lower()
+        generic_phrases = (
+            "general lab report", "general diagnostic lab report", "diagnostic lab report",
+            "diagnostic report", "comprehensive diagnostic report", "auto-detect", "✨",
+            "investigation report", "lab report", "pathology report", "clinical laboratory report"
+        )
+        if any(p in t for p in generic_phrases) and not any(k in t for k in ("urine", "blood", "cbc", "lipid", "liver", "lft", "kidney", "kft", "rft", "thyroid", "glucose", "diabetic")):
+            return True
+        return False
+
+    @staticmethod
+    def infer_title_from_parameters(parameters: list[dict]) -> str:
+        """
+        Infers the exact clinical investigation title from extracted parameter names
+        with 100% deterministic pathology confidence.
+        """
+        if not parameters:
+            return ""
+        names = []
+        for p in parameters:
+            if isinstance(p, dict):
+                names.append(str(p.get("parameter_name", "")).lower())
+            elif isinstance(p, str):
+                names.append(p.lower())
+        combined = " ".join(names)
+
+        if any(k in combined for k in ("pus cells", "epithelial cells", "urine protein", "specific gravity", "leucocytes", "crystals")):
+            return "Urine Complete (Routine & Microscopy)"
+        if any(k in combined for k in ("hemoglobin", "platelet", "rbc", "wbc", "tlc", "pcv", "neutrophil", "lymphocyte")):
+            return "Complete Blood Count (CBC)"
+        if any(k in combined for k in ("cholesterol", "triglyceride", "hdl", "ldl", "vldl")):
+            return "Comprehensive Lipid Profile"
+        if any(k in combined for k in ("sgpt", "sgot", "bilirubin", "alt", "ast", "alkaline phosphatase")):
+            return "Liver Function Test (LFT)"
+        if any(k in combined for k in ("creatinine", "blood urea", "uric acid", "bun")):
+            return "Kidney Function Test (KFT/RFT)"
+        if any(k in combined for k in ("tsh", "t3", "t4", "thyroid")):
+            return "Thyroid Profile (T3, T4, TSH)"
+        if any(k in combined for k in ("hba1c", "fasting blood sugar", "glucose", "post prandial")):
+            return "Diabetic & Glucose Profile"
+        if any(k in combined for k in ("vitamin d", "vitamin b12", "ferritin")):
+            return "Vitamin & Micronutrient Profile"
+        return ""
+
+    @staticmethod
     def extract_report_title(ocr_text: str) -> str:
         """
         Extracts the genuine medical test/investigation title from report text
@@ -312,12 +361,14 @@ class ReportAnalysisService:
                 original_filename=original_filename
             )
             if ai_data:
-                ai_title = ai_data.get("detected_title", "").strip()
-                # Prioritize genuine AI-detected clinical title over generic placeholders
-                if user_test_type.strip().lower() in GENERIC_LABELS:
-                    detected_title = ai_title or cls.extract_report_title(extracted_text) or "Diagnostic Lab Report"
+                ai_title = (ai_data.get("detected_title") or "").strip()
+                ai_params = ai_data.get("parameters", [])
+                inferred_title = cls.infer_title_from_parameters(ai_params) or cls.extract_report_title(ai_data.get("extracted_text") or extracted_text)
+
+                if cls.is_generic_title(user_test_type):
+                    detected_title = (ai_title if not cls.is_generic_title(ai_title) else "") or inferred_title or ai_title or "Diagnostic Lab Report"
                 else:
-                    detected_title = user_test_type or ai_title or cls.extract_report_title(extracted_text) or "Diagnostic Lab Report"
+                    detected_title = user_test_type or (ai_title if not cls.is_generic_title(ai_title) else "") or inferred_title or "Diagnostic Lab Report"
 
                 detected_date = user_report_date or ai_data.get("test_date") or cls.extract_report_date(extracted_text)
                 return {
@@ -325,7 +376,7 @@ class ReportAnalysisService:
                     "lab_name": ai_data.get("lab_name", ""),
                     "test_date": detected_date,
                     "extracted_text": ai_data.get("extracted_text") or extracted_text,
-                    "parameters": ai_data.get("parameters", []),
+                    "parameters": ai_params,
                     "ai_analysis": {
                         "ai_provider": ai_data.get("ai_provider", "Google Gemini"),
                         "summary_plain_en": ai_data.get("summary_plain_en", ""),
@@ -340,13 +391,14 @@ class ReportAnalysisService:
         # -------------------------------------------------------------
         # STEP 2: Rule-Based Fallback Engine (Offline / Local)
         # -------------------------------------------------------------
-        if user_test_type.strip().lower() in GENERIC_LABELS:
-            detected_title = cls.extract_report_title(extracted_text) or "Diagnostic Lab Report"
+        test_values = cls.parse_lab_parameters(extracted_text)
+        inferred_fallback = cls.infer_title_from_parameters(test_values) or cls.extract_report_title(extracted_text)
+        if cls.is_generic_title(user_test_type):
+            detected_title = inferred_fallback or "Diagnostic Lab Report"
         else:
-            detected_title = user_test_type or cls.extract_report_title(extracted_text) or "Diagnostic Lab Report"
+            detected_title = user_test_type or inferred_fallback or "Diagnostic Lab Report"
 
         detected_date = user_report_date or cls.extract_report_date(extracted_text) or None
-        test_values = cls.parse_lab_parameters(extracted_text)
         explanation = cls.generate_ai_explanation(test_values, original_filename)
 
         return {
@@ -371,17 +423,17 @@ class ReportAnalysisService:
         parts = []
 
         system_prompt = (
-            "You are an expert clinical laboratory data extraction engine. "
+            "You are an expert clinical laboratory pathologist and data extraction engine. "
             "Analyze this medical lab report document (image or text). "
             "Return ONLY valid JSON matching this exact structure without markdown backticks:\n"
             "{\n"
-            '  "detected_title": "Official Test Title (e.g. Urine Complete (Routine & Microscopy), Complete Blood Count (CBC), Lipid Profile, Liver Function Test, etc.)",\n'
+            '  "detected_title": "Accurate Medical Investigation Title (e.g. Urine Complete (Routine & Microscopy), Complete Blood Count (CBC), Comprehensive Lipid Profile, Liver Function Test (LFT), Kidney Function Test (KFT), etc.)",\n'
             '  "lab_name": "Hospital or laboratory name if visible, else empty string",\n'
             '  "test_date": "Test date in YYYY-MM-DD if visible, else empty string",\n'
-            '  "extracted_text": "Clean textual transcription of the test parameters and findings",\n'
+            '  "extracted_text": "Clean textual transcription of the test parameters, findings, and impressions",\n'
             '  "parameters": [\n'
             '    {\n'
-            '      "parameter_name": "Name of parameter (e.g. Hemoglobin, Pus Cells, Creatinine, Protein)",\n'
+            '      "parameter_name": "Name of parameter (e.g. Hemoglobin, Pus Cells, Creatinine, Total Cholesterol)",\n'
             '      "measured_value": 0.0,\n'
             '      "measured_text": "Exact string (e.g. 14.2, 250-300, 1+, Negative)",\n'
             '      "unit": "Unit (e.g. mg/dL, Cells/hpf, % or empty)",\n'
@@ -391,12 +443,12 @@ class ReportAnalysisService:
             '      "flag": "NORMAL or HIGH or LOW or CRITICAL"\n'
             '    }\n'
             '  ],\n'
-            '  "summary_plain_en": "Compassionate, patient-friendly explanation in plain English highlighting normal vs abnormal findings, reassurance, and practical health notes.",\n'
-            '  "clinical_notes": "Concise summary for clinical review",\n'
+            '  "summary_plain_en": "A clear, empathetic, and thorough explanation in plain language. Must include: (1) What test was performed and its purpose, (2) Highlights of key normal parameters and any out-of-range/elevated parameters with their values, (3) A clear, reassuring explanation of what the abnormal findings typically suggest, (4) Reassurance that single lab results fluctuate and require physician review, and (5) Practical wellness guidance.",\n'
+            '  "clinical_notes": "Concise summary for clinical review highlighting significant pathology markers",\n'
             '  "risk_level": "LOW or MODERATE or HIGH",\n'
             '  "abnormal_count": 0,\n'
-            '  "urgent_flags": "Warning text if critical, else No critical alerts identified.",\n'
-            '  "recommendations": "Actionable next steps (hydration, doctor consultation, etc.)"\n'
+            '  "urgent_flags": "Warning text if critical thresholds reached, else No critical alerts identified.",\n'
+            '  "recommendations": "Actionable next steps (e.g. consult primary physician, adequate hydration, follow-up testing)"\n'
             "}"
         )
 

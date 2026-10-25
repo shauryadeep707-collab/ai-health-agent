@@ -281,21 +281,29 @@ const ReportUpload = {
                   📄 <em>Source File:</em> ${r.original_filename} | ⏱️ <em>Uploaded:</em> ${uploadDateDisplay}
                 </div>
                 ${r.summary_plain_en ? `
-                  <p style="font-size:0.85rem; color:var(--slate-700); margin:0; line-height:1.4; background:#f8fafc; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid #e2e8f0;">
-                    💡 <strong>Summary:</strong> ${r.summary_plain_en.length > 180 ? r.summary_plain_en.slice(0, 180) + '...' : r.summary_plain_en}
-                  </p>
+                  <div style="font-size:0.88rem; color:var(--slate-700); margin-top:0.4rem; line-height:1.5; background:#f8fafc; padding:0.65rem 0.85rem; border-radius:6px; border:1px solid #e2e8f0;">
+                    💡 <strong>Summary:</strong> ${r.summary_plain_en.replace(/\n\n/g, '<br><br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}
+                  </div>
                 ` : ''}
               </div>
-              <div style="display:flex; flex-direction:column; gap:0.4rem; min-width:150px;">
+              <div style="display:flex; flex-direction:column; gap:0.4rem; min-width:160px;">
                 <button onclick="ReportUpload.openOriginalFile('${r.report_id}')" class="btn btn-outline btn-sm" style="display:inline-flex; align-items:center; justify-content:center; gap:0.3rem;">
-                  👁️ View Report Image
+                  👁️ View File
                 </button>
                 <button onclick="ReportUpload.viewReportDetail('${r.report_id}')" class="btn btn-primary btn-sm">
                   📊 View Analysis
                 </button>
-                <button onclick="ReportUpload.discussWithAI('${reportTitle}', '${testDateDisplay}')" class="btn btn-outline btn-sm">
+                <button onclick="ReportUpload.discussWithAI('${reportTitle.replace(/'/g, "\\'")}', '${testDateDisplay}')" class="btn btn-outline btn-sm">
                   💬 Ask AI
                 </button>
+                <div style="display:flex; gap:0.3rem; margin-top:0.2rem;">
+                  <button onclick="ReportUpload.reanalyzeReport('${r.report_id}', this)" class="btn btn-outline btn-sm" style="flex:1; font-size:0.75rem; padding:0.25rem 0.4rem;" title="Run fresh AI analysis on document">
+                    🔄 Re-analyze
+                  </button>
+                  <button onclick="ReportUpload.deleteReport('${r.report_id}')" class="btn btn-outline btn-sm" style="color:#ef4444; border-color:#fca5a5; font-size:0.75rem; padding:0.25rem 0.4rem;" title="Delete report">
+                    🗑️ Delete
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -343,9 +351,65 @@ const ReportUpload = {
           test_values: data.test_values,
           ai_analysis: data.analysis
         });
+        window.scrollTo({ top: 300, behavior: 'smooth' });
       }
     } catch (err) {
       alert("Error loading report: " + err.message);
+    }
+  },
+
+  async reanalyzeReport(reportId, btn) {
+    if (!reportId) return;
+    const originalText = btn ? btn.innerText : "";
+    if (btn) {
+      btn.innerText = "⏳ Running...";
+      btn.disabled = true;
+    }
+    try {
+      const res = await Auth.fetchWithAuth(`/api/patient/reports/${reportId}/reanalyze`, { method: "POST" });
+      if (!res) return;
+      const data = await res.json();
+      if (data.success) {
+        this.renderAnalysisResult({
+          report_id: data.report_id,
+          test_type: data.test_type,
+          report_date: data.report_date,
+          test_values: data.test_values,
+          ai_analysis: data.ai_analysis
+        });
+        await this.loadHistory();
+        alert("Report re-analyzed successfully!");
+      } else {
+        alert(data.error || "Failed to re-analyze report.");
+      }
+    } catch (err) {
+      alert("Re-analysis error: " + err.message);
+    } finally {
+      if (btn) {
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    }
+  },
+
+  async deleteReport(reportId) {
+    if (!reportId) return;
+    if (!confirm("Are you sure you want to delete this report record and its analysis?")) {
+      return;
+    }
+    try {
+      const res = await Auth.fetchWithAuth(`/api/patient/reports/${reportId}`, { method: "DELETE" });
+      if (!res) return;
+      const data = await res.json();
+      if (data.success) {
+        await this.loadHistory();
+        const container = document.getElementById("analysis-result-container");
+        if (container) container.innerHTML = "";
+      } else {
+        alert(data.error || "Failed to delete report.");
+      }
+    } catch (err) {
+      alert("Delete error: " + err.message);
     }
   },
 

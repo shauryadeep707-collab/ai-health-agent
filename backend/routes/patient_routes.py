@@ -87,13 +87,7 @@ def upload_medical_report():
         return jsonify({"success": False, "error": err_msg}), 400
 
     raw_user_type = request.form.get("test_type", "").strip()
-    GENERIC_LABELS = {
-        "", "general lab report", "general diagnostic lab report",
-        "comprehensive diagnostic report", "diagnostic lab report",
-        "diagnostic report", "✨ auto-detect test title from document",
-        "✨ auto-detect investigation title from document"
-    }
-    user_test_type = "" if raw_user_type.lower() in GENERIC_LABELS else sanitize_input(raw_user_type)
+    user_test_type = "" if ReportAnalysisService.is_generic_title(raw_user_type) else sanitize_input(raw_user_type)
     report_date = request.form.get("report_date", "").strip() or None
 
     # Secure storage
@@ -159,6 +153,7 @@ def upload_medical_report():
         "report_id": report_id,
         "original_filename": safe_name,
         "test_type": final_test_type,
+        "report_date": final_report_date,
         "test_values": parsed_values,
         "ai_analysis": ai_analysis,
         "file_url": f"/api/patient/reports/{report_id}/file",
@@ -219,6 +214,104 @@ def confirm_report_values(report_id):
 
     MedicalReportRepository.set_confirmed(report_id, 1)
     return jsonify({"success": True, "message": "Extracted report values confirmed by patient."})
+
+@patient_bp.route("/reports/<report_id>/reanalyze", methods=["POST"])
+@jwt_required
+@role_required(["PATIENT"])
+def reanalyze_medical_report(report_id):
+    """
+    Triggers a fresh multimodal AI re-analysis on an existing report file.
+    """
+    user = request.current_user
+    pat = PatientProfileRepository.find_by_user_id(user["user_id"])
+    report = MedicalReportRepository.find_by_id(report_id)
+
+    if not report or report["patient_id"] != pat["patient_id"]:
+        return jsonify({"success": False, "error": "Report not found or access unauthorized."}), 404
+
+    raw_path = report.get("file_path")
+    file_path = Path(raw_path) if raw_path else None
+    if not file_path or not file_path.exists():
+        stored_name = report.get("stored_filename", "")
+        file_path = Config.UPLOAD_FOLDER / stored_name
+
+    if not file_path.exists():
+        return jsonify({"success": False, "error": "Report file is not available on disk for re-analysis."}), 404
+
+    mime_type = report.get("file_type") or "image/jpeg"
+    analysis_result = ReportAnalysisService.analyze_report_comprehensive(
+        file_path=str(file_path),
+        file_type=mime_type,
+        original_filename=report.get("original_filename", "report"),
+        user_test_type="",
+        user_report_date=""
+    )
+
+    new_title = analysis_result.get("detected_title") or report.get("test_type") or "Diagnostic Lab Report"
+    new_date = analysis_result.get("test_date") or report.get("report_date")
+    parsed_values = analysis_result.get("parameters", [])
+    ai_analysis = analysis_result.get("ai_analysis", {})
+    extracted_text = analysis_result.get("extracted_text", "")
+
+    # Update metadata
+    MedicalReportRepository.update_report_metadata(
+        report_id=report_id,
+        test_type=new_title,
+        report_date=new_date,
+        ocr_raw_text=extracted_text
+    )
+
+    # Refresh test values
+    MedicalReportRepository.clear_test_values(report_id)
+    MedicalReportRepository.save_test_values(report_id, parsed_values)
+
+    # Update AI analysis
+    MedicalReportRepository.update_or_save_analysis(
+        report_id=report_id,
+        ai_provider=ai_analysis.get("ai_provider", "Google Gemini"),
+        summary_plain_en=ai_analysis.get("summary_plain_en", ""),
+        clinical_notes=ai_analysis.get("clinical_notes", ""),
+        abnormal_count=ai_analysis.get("abnormal_count", 0),
+        urgent_flags=ai_analysis.get("urgent_flags", ""),
+        risk_level=ai_analysis.get("risk_level", "LOW"),
+        recommendations=ai_analysis.get("recommendations", "")
+    )
+
+    return jsonify({
+        "success": True,
+        "message": "Report successfully re-analyzed with AI.",
+        "report_id": report_id,
+        "test_type": new_title,
+        "report_date": new_date,
+        "test_values": parsed_values,
+        "ai_analysis": ai_analysis
+    })
+
+@patient_bp.route("/reports/<report_id>", methods=["DELETE"])
+@jwt_required
+@role_required(["PATIENT"])
+def delete_medical_report(report_id):
+    """
+    Deletes a report and removes its file from storage.
+    """
+    user = request.current_user
+    pat = PatientProfileRepository.find_by_user_id(user["user_id"])
+    report = MedicalReportRepository.find_by_id(report_id)
+
+    if not report or report["patient_id"] != pat["patient_id"]:
+        return jsonify({"success": False, "error": "Report not found or access unauthorized."}), 404
+
+    # Remove file from disk if present
+    try:
+        raw_path = report.get("file_path")
+        file_path = Path(raw_path) if raw_path else Config.UPLOAD_FOLDER / report.get("stored_filename", "")
+        if file_path.exists():
+            file_path.unlink()
+    except Exception as e:
+        logger.warning("Could not delete report file from disk: %s", e)
+
+    MedicalReportRepository.delete_report(report_id)
+    return jsonify({"success": True, "message": "Report successfully deleted."})
 
 @patient_bp.route("/reports", methods=["GET"])
 @jwt_required
