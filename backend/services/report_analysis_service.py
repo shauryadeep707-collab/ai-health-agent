@@ -86,6 +86,8 @@ STANDARD_LAB_DICTIONARY = {
 
 FALLBACK_GEMINI_MODELS = list(dict.fromkeys([
     "gemini-3.5-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3.1-flash-lite",
     "gemini-3.5-flash",
     Config.GEMINI_MODEL,
     "gemini-3.8-flash"
@@ -502,7 +504,7 @@ class ReportAnalysisService:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={Config.GEMINI_API_KEY}"
             payload = {
                 "contents": [{"parts": parts}],
-                "generationConfig": {"temperature": 0.1, "response_mime_type": "application/json"}
+                "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192, "response_mime_type": "application/json"}
             }
             import time
             for attempt in range(2):
@@ -517,7 +519,22 @@ class ReportAnalysisService:
                                 raw_json = c_parts[0].get("text", "").strip()
                                 # Clean possible code fence
                                 raw_json = re.sub(r"^```(?:json)?", "", raw_json).rstrip("`").strip()
-                                parsed = json.loads(raw_json)
+                                try:
+                                    parsed = json.loads(raw_json)
+                                except Exception:
+                                    # Fallback: attempt to complete truncated json
+                                    repaired = None
+                                    for ending in (']}', '"}', '"]}', '}]}', '}'):
+                                        try:
+                                            repaired = json.loads(raw_json + ending)
+                                            break
+                                        except Exception:
+                                            continue
+                                    if repaired:
+                                        parsed = repaired
+                                    else:
+                                        m = re.search(r"(\{.*\})", raw_json, re.DOTALL)
+                                        parsed = json.loads(m.group(1)) if m else json.loads(raw_json)
                                 if isinstance(parsed, list) and len(parsed) > 0 and isinstance(parsed[0], dict):
                                     parsed = parsed[0]
                                 parsed["ai_provider"] = f"Google Gemini ({model})"
