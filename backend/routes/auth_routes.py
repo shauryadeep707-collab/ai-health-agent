@@ -187,9 +187,19 @@ def login():
         return jsonify({"success": False, "error": "Email and password are required."}), 400
 
     user = UserRepository.find_by_email(email)
-    if not user or not check_password(password, user["password_hash"]):
-        log_audit_event("LOGIN_FAILED", "USERS", email, "FAILURE", {"reason": "Invalid credentials"})
-        return jsonify({"success": False, "error": "Invalid email or password."}), 401
+    if not user:
+        log_audit_event("LOGIN_FAILED", "USERS", email, "FAILURE", {"reason": "User not found"})
+        return jsonify({
+            "success": False,
+            "error": f"No account found with '{email}'. Please check your email or click 'Create Patient Account' below."
+        }), 404
+
+    if not check_password(password, user["password_hash"]):
+        log_audit_event("LOGIN_FAILED", "USERS", email, "FAILURE", {"reason": "Incorrect password"})
+        return jsonify({
+            "success": False,
+            "error": "Incorrect password. Please verify your password and try again."
+        }), 401
 
     if not user.get("is_active"):
         return jsonify({"success": False, "error": "This account has been deactivated. Please contact support."}), 403
