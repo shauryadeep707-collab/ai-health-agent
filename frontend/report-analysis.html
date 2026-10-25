@@ -67,11 +67,14 @@
           <div class="form-group">
             <label class="form-label" for="report-test-type">Test Category</label>
             <select id="report-test-type" class="form-control">
-              <option value="Comprehensive Lipid Profile">Comprehensive Lipid Profile</option>
+              <option value="" selected>✨ Auto-Detect Test Title from Document</option>
               <option value="Complete Blood Count (CBC)">Complete Blood Count (CBC)</option>
+              <option value="Comprehensive Lipid Profile">Comprehensive Lipid Profile</option>
               <option value="Liver Function Test (LFT)">Liver Function Test (LFT)</option>
-              <option value="Thyroid Stimulating Hormone (TSH)">Thyroid Panel</option>
-              <option value="General Diagnostic Lab Report">General Diagnostic Lab Report</option>
+              <option value="Kidney Function Test (KFT/RFT)">Kidney Function Test (KFT/RFT)</option>
+              <option value="Urine Complete (Routine & Microscopy)">Urine Complete (Routine & Microscopy)</option>
+              <option value="Thyroid Profile (T3, T4, TSH)">Thyroid Panel (T3, T4, TSH)</option>
+              <option value="Diabetic & Glucose Profile">Diabetic & Glucose Profile</option>
             </select>
           </div>
           <div class="form-group">
@@ -129,6 +132,31 @@
       </div>
       <div id="reports-history-list" style="margin-top:1rem;">
         <!-- Populated dynamically by ReportUpload.loadHistory() -->
+      </div>
+    </div>
+    <!-- Universal Report File Viewer Modal -->
+    <div class="modal-overlay" id="report-file-viewer-modal">
+      <div class="modal-card modal-card-viewer">
+        <div class="modal-header">
+          <h3 class="modal-title" id="report-file-viewer-title">📄 Original Medical Report</h3>
+          <button onclick="ReportUpload.closeFileViewer()" class="modal-close" title="Close (Esc)">&times;</button>
+        </div>
+        <div class="modal-body" id="report-file-viewer-content" style="padding:1rem;">
+          <!-- Dynamic Image / PDF rendered here -->
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+          <span style="font-size:0.85rem; color:var(--slate-500);">
+            🔒 End-to-end encrypted medical record
+          </span>
+          <div style="display:flex; gap:0.5rem;">
+            <a id="report-file-download-btn" href="#" target="_blank" class="btn btn-outline btn-sm">
+              ↗ Open in New Window
+            </a>
+            <button type="button" onclick="ReportUpload.closeFileViewer()" class="btn btn-primary btn-sm">
+              Close
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </main>

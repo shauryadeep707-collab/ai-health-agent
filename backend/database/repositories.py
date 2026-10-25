@@ -1,4 +1,5 @@
 import uuid
+import re
 import json
 from datetime import datetime
 from backend.database.connection import db_manager
@@ -377,6 +378,17 @@ class MedicalReportRepository:
         """values is a list of dicts: parameter_name, measured_value, measured_text, unit, ref_range_min, ref_range_max, ref_range_text, flag"""
         for item in values:
             val_id = f"val-{uuid.uuid4().hex[:12]}"
+            m_val = item.get("measured_value")
+            if m_val is None:
+                # Attempt to extract first numerical scalar if present in text
+                raw_txt = str(item.get("measured_text") or "")
+                nums = re.findall(r"\b\d+(?:\.\d+)?\b", raw_txt)
+                if nums:
+                    try:
+                        m_val = float(nums[-1])  # e.g. 250-300 -> 300
+                    except Exception:
+                        m_val = None
+
             query = """
             INSERT INTO REPORT_TEST_VALUES
             (value_id, report_id, parameter_name, measured_value, measured_text, unit, ref_range_min, ref_range_max, ref_range_text, flag)
@@ -386,12 +398,12 @@ class MedicalReportRepository:
                 "value_id": val_id,
                 "report_id": report_id,
                 "parameter_name": item.get("parameter_name"),
-                "measured_value": item.get("measured_value"),
-                "measured_text": str(item.get("measured_text") or item.get("measured_value")),
-                "unit": item.get("unit"),
+                "measured_value": m_val,
+                "measured_text": str(item.get("measured_text") or item.get("measured_value") or ""),
+                "unit": item.get("unit") or "",
                 "ref_range_min": item.get("ref_range_min"),
                 "ref_range_max": item.get("ref_range_max"),
-                "ref_range_text": item.get("ref_range_text"),
+                "ref_range_text": item.get("ref_range_text") or "",
                 "flag": item.get("flag", "NORMAL")
             })
 

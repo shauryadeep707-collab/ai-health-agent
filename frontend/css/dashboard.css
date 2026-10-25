@@ -493,6 +493,11 @@
   box-shadow: var(--shadow-xl);
   border: 1px solid var(--slate-200);
 }
+.modal-card-viewer {
+  max-width: 960px !important;
+  width: 95% !important;
+  max-height: 94vh !important;
+}
 .modal-header {
   padding: 1.35rem 1.75rem;
   border-bottom: 1px solid var(--slate-100);

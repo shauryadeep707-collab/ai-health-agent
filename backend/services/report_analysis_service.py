@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import base64
 import logging
 from pathlib import Path
 import pypdf
@@ -9,35 +10,138 @@ from backend.config import Config
 
 logger = logging.getLogger(__name__)
 
-# Standard lab reference range dictionary for common blood and biochemical markers
+# Comprehensive lab reference range dictionary covering all major pathology disciplines:
+# Hematology (CBC), Biochemistry, Renal, Liver, Lipid, Diabetic, Thyroid, Vitamins, and Urine Analysis
 STANDARD_LAB_DICTIONARY = {
+    # 1. Hematology / Complete Blood Count (CBC)
     "hemoglobin": {"unit": "g/dL", "min": 13.0, "max": 17.0, "name": "Hemoglobin (Hb)", "critical_low": 7.0, "critical_high": 20.0},
     "rbc": {"unit": "million/mcL", "min": 4.5, "max": 5.9, "name": "Red Blood Cell Count (RBC)"},
     "wbc": {"unit": "/mcL", "min": 4000.0, "max": 11000.0, "name": "White Blood Cell Count (WBC)", "critical_low": 2000.0, "critical_high": 30000.0},
+    "tlc": {"unit": "/mcL", "min": 4000.0, "max": 11000.0, "name": "Total Leukocyte Count (TLC)"},
     "platelet": {"unit": "/mcL", "min": 150000.0, "max": 450000.0, "name": "Platelet Count", "critical_low": 50000.0},
+    "pcv": {"unit": "%", "min": 40.0, "max": 50.0, "name": "Packed Cell Volume (PCV / Hematocrit)"},
+    "mcv": {"unit": "fL", "min": 80.0, "max": 100.0, "name": "Mean Corpuscular Volume (MCV)"},
+    "mch": {"unit": "pg", "min": 27.0, "max": 33.0, "name": "Mean Corpuscular Hemoglobin (MCH)"},
+    "mchc": {"unit": "g/dL", "min": 32.0, "max": 36.0, "name": "MCHC"},
+    "esr": {"unit": "mm/hr", "min": 0.0, "max": 20.0, "name": "Erythrocyte Sedimentation Rate (ESR)"},
+    "neutrophils": {"unit": "%", "min": 40.0, "max": 75.0, "name": "Neutrophils"},
+    "lymphocytes": {"unit": "%", "min": 20.0, "max": 45.0, "name": "Lymphocytes"},
+    "eosinophils": {"unit": "%", "min": 1.0, "max": 6.0, "name": "Eosinophils"},
+    "monocytes": {"unit": "%", "min": 2.0, "max": 10.0, "name": "Monocytes"},
+
+    # 2. Lipid Profile
     "total cholesterol": {"unit": "mg/dL", "min": 125.0, "max": 200.0, "name": "Total Cholesterol", "critical_high": 300.0},
     "ldl": {"unit": "mg/dL", "min": 0.0, "max": 100.0, "name": "LDL Cholesterol (Direct)", "critical_high": 190.0},
     "hdl": {"unit": "mg/dL", "min": 40.0, "max": 60.0, "name": "HDL Cholesterol"},
     "triglycerides": {"unit": "mg/dL", "min": 50.0, "max": 150.0, "name": "Triglycerides", "critical_high": 500.0},
+    "vldl": {"unit": "mg/dL", "min": 5.0, "max": 30.0, "name": "VLDL Cholesterol"},
+
+    # 3. Diabetic Profile
     "fasting blood sugar": {"unit": "mg/dL", "min": 70.0, "max": 100.0, "name": "Fasting Blood Glucose", "critical_low": 54.0, "critical_high": 300.0},
     "post prandial": {"unit": "mg/dL", "min": 70.0, "max": 140.0, "name": "Post-Prandial Glucose", "critical_high": 300.0},
+    "random blood sugar": {"unit": "mg/dL", "min": 70.0, "max": 140.0, "name": "Random Blood Glucose", "critical_high": 300.0},
     "hba1c": {"unit": "%", "min": 4.0, "max": 5.6, "name": "Glycated Hemoglobin (HbA1c)", "critical_high": 10.0},
+
+    # 4. Renal / Kidney Function (KFT / RFT)
     "creatinine": {"unit": "mg/dL", "min": 0.6, "max": 1.2, "name": "Serum Creatinine", "critical_high": 4.0},
     "blood urea": {"unit": "mg/dL", "min": 15.0, "max": 40.0, "name": "Blood Urea Nitrogen (BUN)"},
     "uric acid": {"unit": "mg/dL", "min": 3.5, "max": 7.2, "name": "Serum Uric Acid"},
-    "sgpt": {"unit": "U/L", "min": 7.0, "max": 56.0, "name": "ALT (SGPT)"},
-    "sgot": {"unit": "U/L", "min": 10.0, "max": 40.0, "name": "AST (SGOT)"},
-    "bilirubin": {"unit": "mg/dL", "min": 0.2, "max": 1.2, "name": "Total Bilirubin"},
-    "tsh": {"unit": "uIU/mL", "min": 0.4, "max": 4.5, "name": "Thyroid Stimulating Hormone (TSH)"},
-    "vitamin d": {"unit": "ng/mL", "min": 30.0, "max": 100.0, "name": "Vitamin D (25-OH)"},
-    "vitamin b12": {"unit": "pg/mL", "min": 200.0, "max": 900.0, "name": "Vitamin B12"}
+    "sodium": {"unit": "mEq/L", "min": 135.0, "max": 145.0, "name": "Serum Sodium", "critical_low": 120.0, "critical_high": 160.0},
+    "potassium": {"unit": "mEq/L", "min": 3.5, "max": 5.1, "name": "Serum Potassium", "critical_low": 2.8, "critical_high": 6.2},
+    "calcium": {"unit": "mg/dL", "min": 8.5, "max": 10.5, "name": "Serum Calcium"},
+
+    # 5. Liver Function (LFT)
+    "sgpt": {"unit": "U/L", "min": 7.0, "max": 56.0, "name": "ALT (SGPT)", "critical_high": 300.0},
+    "alt": {"unit": "U/L", "min": 7.0, "max": 56.0, "name": "ALT (SGPT)", "critical_high": 300.0},
+    "sgot": {"unit": "U/L", "min": 10.0, "max": 40.0, "name": "AST (SGOT)", "critical_high": 300.0},
+    "ast": {"unit": "U/L", "min": 10.0, "max": 40.0, "name": "AST (SGOT)", "critical_high": 300.0},
+    "bilirubin": {"unit": "mg/dL", "min": 0.2, "max": 1.2, "name": "Total Bilirubin", "critical_high": 12.0},
+    "direct bilirubin": {"unit": "mg/dL", "min": 0.0, "max": 0.3, "name": "Direct Bilirubin"},
+    "alkaline phosphatase": {"unit": "U/L", "min": 44.0, "max": 147.0, "name": "Alkaline Phosphatase (ALP)"},
+    "total protein": {"unit": "g/dL", "min": 6.0, "max": 8.3, "name": "Total Serum Protein"},
+    "albumin": {"unit": "g/dL", "min": 3.5, "max": 5.0, "name": "Serum Albumin"},
+
+    # 6. Thyroid Function (TFT)
+    "tsh": {"unit": "uIU/mL", "min": 0.4, "max": 4.5, "name": "Thyroid Stimulating Hormone (TSH)", "critical_high": 20.0},
+    "t3": {"unit": "ng/dL", "min": 80.0, "max": 200.0, "name": "Total Triiodothyronine (T3)"},
+    "t4": {"unit": "ug/dL", "min": 4.5, "max": 12.0, "name": "Total Thyroxine (T4)"},
+
+    # 7. Vitamins & Minerals
+    "vitamin d": {"unit": "ng/mL", "min": 30.0, "max": 100.0, "name": "Vitamin D (25-OH)", "critical_low": 10.0},
+    "vitamin b12": {"unit": "pg/mL", "min": 200.0, "max": 900.0, "name": "Vitamin B12", "critical_low": 100.0},
+    "ferritin": {"unit": "ng/mL", "min": 20.0, "max": 250.0, "name": "Serum Ferritin"},
+
+    # 8. Urine Routine & Microscopy (Clinical Pathology)
+    "pus cells": {"unit": "Cells/hpf", "min": 0.0, "max": 5.0, "name": "Pus Cells (WBC in Urine)", "critical_high": 100.0},
+    "epithelial cells": {"unit": "Cells/hpf", "min": 0.0, "max": 5.0, "name": "Epithelial Cells"},
+    "r.b.c": {"unit": "Cells/hpf", "min": 0.0, "max": 3.0, "name": "Urine Red Blood Cells (RBCs)"},
+    "red blood cells": {"unit": "Cells/hpf", "min": 0.0, "max": 3.0, "name": "Urine Red Blood Cells (RBCs)"},
+    "specific gravity": {"unit": "", "min": 1.000, "max": 1.030, "name": "Specific Gravity"},
+    "ph": {"unit": "", "min": 5.0, "max": 8.0, "name": "Urine pH"},
+    "protein": {"unit": "", "min": 0.0, "max": 0.0, "name": "Urine Protein / Albumin"},
+    "nitrite": {"unit": "", "min": 0.0, "max": 0.0, "name": "Urine Nitrite"},
+    "leucocytes": {"unit": "", "min": 0.0, "max": 0.0, "name": "Urine Leucocytes"},
+    "bacteria": {"unit": "", "min": 0.0, "max": 0.0, "name": "Urine Bacteria"}
 }
+
+FALLBACK_GEMINI_MODELS = list(dict.fromkeys([
+    Config.GEMINI_MODEL,
+    "gemini-3.5-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-3.5-flash",
+    "gemini-flash-latest"
+]))
+
 
 class ReportAnalysisService:
     """
-    Extracts structured laboratory values from uploaded PDF reports and generates
-    safe, non-diagnostic plain English explanations powered by Google Gemini or Ollama.
+    Universal clinical laboratory data extraction and plain English explanatory service.
+    Works seamlessly across ANY medical report (Blood, Urine, Liver, Kidney, Thyroid,
+    Lipid, Diabetic, Vitamin, etc.) in PDF or Image format using Multimodal AI with
+    deterministic clinical rule-engine fallbacks.
     """
+
+    @staticmethod
+    def extract_report_title(ocr_text: str) -> str:
+        """
+        Extracts the genuine medical test/investigation title from report text
+        (e.g., 'URINE COMPLETE (ROUTINE & MICROSCOPY)', 'COMPLETE BLOOD COUNT (CBC)',
+        'LIVER FUNCTION TEST (LFT)', 'LIPID PROFILE', etc.).
+        """
+        if not ocr_text:
+            return "Diagnostic Lab Report"
+
+        # Explicit known test patterns
+        known_titles = [
+            (r'URINE\s+COMPLETE\s*[\(\[]?.*?(?:ROUTINE|MICROSCOPY)[\)\]]?', "Urine Complete (Routine & Microscopy)"),
+            (r'URINE\s+(?:ROUTINE|ANALYSIS|EXAMINATION)', "Urine Routine Analysis"),
+            (r'COMPLETE\s+BLOOD\s+COUNT(?:\s*\(CBC\))?', "Complete Blood Count (CBC)"),
+            (r'\bCBC\b', "Complete Blood Count (CBC)"),
+            (r'LIVER\s+FUNCTION\s+TEST(?:\s*\(LFT\))?', "Liver Function Test (LFT)"),
+            (r'\bLFT\b', "Liver Function Test (LFT)"),
+            (r'KIDNEY\s+FUNCTION\s+TEST|RENAL\s+FUNCTION\s+TEST', "Kidney Function Test (KFT/RFT)"),
+            (r'\b(?:KFT|RFT)\b', "Kidney Function Test (KFT/RFT)"),
+            (r'LIPID\s+PROFILE|CHOLESTEROL\s+PANEL', "Lipid Profile"),
+            (r'THYROID\s+(?:PROFILE|PANEL|FUNCTION\s+TEST)', "Thyroid Profile (T3, T4, TSH)"),
+            (r'\b(?:TSH|TFT)\b', "Thyroid Function Test"),
+            (r'GLUCOSE\s+TOLERANCE|HBA1C|DIABETIC\s+PANEL|BLOOD\s+SUGAR', "Diabetic & Glucose Profile"),
+            (r'ELECTROLYTE\s+(?:PANEL|PROFILE)', "Serum Electrolytes"),
+            (r'VITAMIN\s+D|VITAMIN\s+B12', "Vitamin Profile"),
+            (r'STOOL\s+(?:ROUTINE|EXAMINATION)', "Stool Routine Examination"),
+            (r'CLINICAL\s+PATHOLOGY', "Clinical Pathology Report"),
+            (r'BIOCHEMISTRY\s+REPORT', "Biochemistry Report")
+        ]
+
+        for pattern, friendly_title in known_titles:
+            if re.search(pattern, ocr_text, re.IGNORECASE):
+                return friendly_title
+
+        # Heuristic header pattern matching: "INVESTIGATION / TEST NAME: XYZ"
+        match = re.search(r'(?:Investigation|Test\s*Name|Profile|Panel)\s*[:\-]\s*([A-Za-z0-9\s\(\)\&\-\/]{4,50})', ocr_text, re.IGNORECASE)
+        if match:
+            return match.group(1).strip().title()
+
+        return "Diagnostic Lab Report"
 
     @staticmethod
     def extract_report_date(ocr_text: str) -> str:
@@ -88,59 +192,74 @@ class ReportAnalysisService:
                 except Exception:
                     pass
 
-        # If no text was extracted (e.g. image without embedded text layer), return empty string
         return text.strip()
 
     @staticmethod
     def parse_lab_parameters(raw_text: str) -> list[dict]:
         """
-        Heuristic regex and dictionary matching to extract laboratory test parameters,
-        measured numerical values, units, reference intervals, and flags.
+        Deterministic regex and dictionary matching to extract laboratory test parameters,
+        numerical values, qualitative statuses (1+, Positive, Negative), and out-of-range flags.
         """
         extracted = []
         lines = raw_text.splitlines()
-
-        # Regular expression for matching "Parameter Name ... Value ... Unit ... Range"
-        pattern = re.compile(
-            r"([A-Za-z\s\(\)\/\-\+0-9]{3,35})\s+([0-9]+(?:\.[0-9]+)?)\s*([a-zA-Z\/\%mcLdLuIU]+)?\s*(?:(?:([0-9]+(?:\.[0-9]+)?)\s*[\-\–]\s*([0-9]+(?:\.[0-9]+)?))|(?:\<\s*([0-9]+(?:\.[0-9]+)?))|(?:\>\s*([0-9]+(?:\.[0-9]+)?)))?",
-            re.IGNORECASE
-        )
-
         seen_keys = set()
 
         for line in lines:
             line_str = line.strip()
-            if not line_str or len(line_str) < 5:
+            if not line_str or len(line_str) < 3:
                 continue
 
-            # Check against standard lab dictionary
             lower_line = line_str.lower()
             for key, dict_info in STANDARD_LAB_DICTIONARY.items():
                 if key in lower_line and key not in seen_keys:
-                    # Search for numerical value on this line
-                    numbers = re.findall(r"\b\d+(?:\.\d+)?\b", line_str)
-                    if numbers:
-                        val = float(numbers[0])
-                        unit = dict_info.get("unit", "")
-                        ref_min = dict_info.get("min", 0.0)
-                        ref_max = dict_info.get("max", 0.0)
-                        ref_text = f"{ref_min} - {ref_max} {unit}"
+                    unit = dict_info.get("unit", "")
+                    ref_min = dict_info.get("min", 0.0)
+                    ref_max = dict_info.get("max", 0.0)
+                    ref_text = f"{ref_min} - {ref_max} {unit}".strip()
 
-                        # Determine flag
-                        flag = "NORMAL"
+                    # Check for qualitative markers (e.g. 1+, 2+, 3+, Positive, Negative, Present)
+                    qual_match = re.search(r'\b([1-4]\+|positive|negative|present|absent|normal)\b', lower_line)
+                    range_match = re.search(r'\b(\d+\s*[\-\–]\s*\d+)\b', line_str)
+                    numbers = re.findall(r"\b\d+(?:\.\d+)?\b", line_str)
+
+                    val = None
+                    val_text = ""
+                    flag = "NORMAL"
+
+                    if range_match:
+                        val_text = range_match.group(1).replace(" ", "")
+                        # e.g., 250-300 Pus Cells -> parse upper bound
+                        parts = val_text.split("-")
+                        try:
+                            upper = float(parts[-1])
+                            val = upper
+                            if upper > ref_max:
+                                flag = "CRITICAL" if upper >= (dict_info.get("critical_high") or 50.0) else "HIGH"
+                        except Exception:
+                            pass
+                    elif numbers:
+                        val = float(numbers[0])
+                        val_text = str(val)
                         if "critical_low" in dict_info and val <= dict_info["critical_low"]:
                             flag = "CRITICAL"
                         elif "critical_high" in dict_info and val >= dict_info["critical_high"]:
                             flag = "CRITICAL"
-                        elif val < ref_min:
+                        elif ref_max > 0 and val < ref_min:
                             flag = "LOW"
-                        elif val > ref_max:
+                        elif ref_max > 0 and val > ref_max:
                             flag = "HIGH"
+                    elif qual_match:
+                        val_text = qual_match.group(1).title()
+                        if val_text in ("1+", "2+", "3+", "4+", "Positive", "Present"):
+                            flag = "HIGH"
+                        else:
+                            flag = "NORMAL"
 
+                    if val_text:
                         extracted.append({
                             "parameter_name": dict_info["name"],
                             "measured_value": val,
-                            "measured_text": str(val),
+                            "measured_text": val_text,
                             "unit": unit,
                             "ref_range_min": ref_min,
                             "ref_range_max": ref_max,
@@ -150,22 +269,188 @@ class ReportAnalysisService:
                         seen_keys.add(key)
                         break
 
-        # Return empty list if no genuine clinical lab parameters matched
         return extracted
+
+    @classmethod
+    def analyze_report_comprehensive(
+        cls,
+        file_path: str,
+        file_type: str,
+        original_filename: str,
+        user_test_type: str = "",
+        user_report_date: str = ""
+    ) -> dict:
+        """
+        Universal comprehensive report analyzer.
+        1. Employs Gemini Multimodal Vision / Language API to extract Title, Date, Lab,
+           and structured lab values directly from images or documents.
+        2. Falls back seamlessly to offline deterministic rule-engine and regex parser.
+        """
+        is_image = any(img_ext in file_type.lower() for img_ext in ("jpg", "jpeg", "png", "webp", "image")) or \
+                   Path(file_path).suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")
+
+        extracted_text = ""
+        if not is_image:
+            extracted_text = cls.extract_text_from_file(file_path, file_type)
+
+        # -------------------------------------------------------------
+        # STEP 1: Attempt Multimodal AI Extraction (Gemini)
+        # -------------------------------------------------------------
+        if Config.AI_PROVIDER == "gemini" and Config.GEMINI_API_KEY:
+            ai_data = cls._call_gemini_multimodal(
+                file_path=file_path,
+                file_type=file_type,
+                is_image=is_image,
+                pdf_text=extracted_text,
+                original_filename=original_filename
+            )
+            if ai_data:
+                detected_title = user_test_type or ai_data.get("detected_title") or cls.extract_report_title(extracted_text)
+                detected_date = user_report_date or ai_data.get("test_date") or cls.extract_report_date(extracted_text)
+                return {
+                    "detected_title": detected_title,
+                    "lab_name": ai_data.get("lab_name", ""),
+                    "test_date": detected_date,
+                    "extracted_text": ai_data.get("extracted_text") or extracted_text,
+                    "parameters": ai_data.get("parameters", []),
+                    "ai_analysis": {
+                        "ai_provider": ai_data.get("ai_provider", "Google Gemini"),
+                        "summary_plain_en": ai_data.get("summary_plain_en", ""),
+                        "clinical_notes": ai_data.get("clinical_notes", ""),
+                        "abnormal_count": ai_data.get("abnormal_count", 0),
+                        "urgent_flags": ai_data.get("urgent_flags", "No critical alerts identified."),
+                        "risk_level": ai_data.get("risk_level", "LOW"),
+                        "recommendations": ai_data.get("recommendations", "")
+                    }
+                }
+
+        # -------------------------------------------------------------
+        # STEP 2: Rule-Based Fallback Engine (Offline / Local)
+        # -------------------------------------------------------------
+        detected_title = user_test_type or cls.extract_report_title(extracted_text) or "Diagnostic Lab Report"
+        detected_date = user_report_date or cls.extract_report_date(extracted_text) or None
+        test_values = cls.parse_lab_parameters(extracted_text)
+        explanation = cls.generate_ai_explanation(test_values, original_filename)
+
+        return {
+            "detected_title": detected_title,
+            "lab_name": "",
+            "test_date": detected_date,
+            "extracted_text": extracted_text,
+            "parameters": test_values,
+            "ai_analysis": explanation
+        }
+
+    @classmethod
+    def _call_gemini_multimodal(
+        cls,
+        file_path: str,
+        file_type: str,
+        is_image: bool,
+        pdf_text: str,
+        original_filename: str
+    ) -> dict | None:
+        """Calls Gemini with structured schema to extract parameters from image or text."""
+        parts = []
+
+        system_prompt = (
+            "You are an expert clinical laboratory data extraction engine. "
+            "Analyze this medical lab report document (image or text). "
+            "Return ONLY valid JSON matching this exact structure without markdown backticks:\n"
+            "{\n"
+            '  "detected_title": "Official Test Title (e.g. Urine Complete (Routine & Microscopy), Complete Blood Count (CBC), Lipid Profile, Liver Function Test, etc.)",\n'
+            '  "lab_name": "Hospital or laboratory name if visible, else empty string",\n'
+            '  "test_date": "Test date in YYYY-MM-DD if visible, else empty string",\n'
+            '  "extracted_text": "Clean textual transcription of the test parameters and findings",\n'
+            '  "parameters": [\n'
+            '    {\n'
+            '      "parameter_name": "Name of parameter (e.g. Hemoglobin, Pus Cells, Creatinine, Protein)",\n'
+            '      "measured_value": 0.0,\n'
+            '      "measured_text": "Exact string (e.g. 14.2, 250-300, 1+, Negative)",\n'
+            '      "unit": "Unit (e.g. mg/dL, Cells/hpf, % or empty)",\n'
+            '      "ref_range_min": null,\n'
+            '      "ref_range_max": null,\n'
+            '      "ref_range_text": "Reference interval string",\n'
+            '      "flag": "NORMAL or HIGH or LOW or CRITICAL"\n'
+            '    }\n'
+            '  ],\n'
+            '  "summary_plain_en": "Compassionate, patient-friendly explanation in plain English highlighting normal vs abnormal findings, reassurance, and practical health notes.",\n'
+            '  "clinical_notes": "Concise summary for clinical review",\n'
+            '  "risk_level": "LOW or MODERATE or HIGH",\n'
+            '  "abnormal_count": 0,\n'
+            '  "urgent_flags": "Warning text if critical, else No critical alerts identified.",\n'
+            '  "recommendations": "Actionable next steps (hydration, doctor consultation, etc.)"\n'
+            "}"
+        )
+
+        parts.append({"text": system_prompt})
+
+        if is_image:
+            try:
+                mime = "image/jpeg"
+                if "png" in file_type.lower() or file_path.lower().endswith(".png"):
+                    mime = "image/png"
+                elif "webp" in file_type.lower() or file_path.lower().endswith(".webp"):
+                    mime = "image/webp"
+
+                with open(file_path, "rb") as f:
+                    b64_content = base64.b64encode(f.read()).decode("utf-8")
+                parts.append({"inline_data": {"mime_type": mime, "data": b64_content}})
+            except Exception as e:
+                logger.warning("Could not read image file for Gemini: %s", e)
+                return None
+        else:
+            if not pdf_text:
+                return None
+            parts.append({"text": f"Document Filename: {original_filename}\nReport Text Content:\n{pdf_text}"})
+
+        # Try models in fallback order
+        for model in FALLBACK_GEMINI_MODELS:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={Config.GEMINI_API_KEY}"
+            payload = {
+                "contents": [{"parts": parts}],
+                "generationConfig": {"temperature": 0.1, "response_mime_type": "application/json"}
+            }
+            try:
+                res = requests.post(url, json=payload, timeout=25)
+                if res.status_code == 200:
+                    data = res.json()
+                    candidates = data.get("candidates", [])
+                    if candidates and "content" in candidates[0]:
+                        c_parts = candidates[0]["content"].get("parts", [])
+                        if c_parts:
+                            raw_json = c_parts[0].get("text", "").strip()
+                            # Clean possible code fence
+                            raw_json = re.sub(r"^```(?:json)?", "", raw_json).rstrip("`").strip()
+                            parsed = json.loads(raw_json)
+                            parsed["ai_provider"] = f"Google Gemini ({model})"
+
+                            # Ensure numerical values match schema
+                            for param in parsed.get("parameters", []):
+                                if param.get("measured_value") is not None:
+                                    try:
+                                        param["measured_value"] = float(param["measured_value"])
+                                    except Exception:
+                                        param["measured_value"] = None
+                            return parsed
+                else:
+                    logger.warning("Gemini model %s returned status %s: %s", model, res.status_code, res.text[:200])
+            except Exception as e:
+                logger.warning("Gemini model %s exception: %s", model, e)
+
+        return None
 
     @staticmethod
     def generate_ai_explanation(test_values: list[dict], original_filename: str) -> dict:
         """
-        Sends extracted parameters to AI model (Gemini / Ollama / Fallback) to create a plain English summary,
-        abnormal counts, urgent flags, and clear non-diagnostic medical disclaimers.
-        If no lab parameters were detected, returns an honest validation advisory.
+        Sends extracted parameters to AI model or rule engine to create a plain English summary.
         """
         if not test_values:
             return {
                 "ai_provider": "Clinical Diagnostic Validator",
                 "summary_plain_en": (
                     "⚠️ **No Diagnostic Laboratory Parameters Detected**\n\n"
-                    "The system did not detect any standard laboratory test values (such as Blood Glucose, Hemoglobin, Lipid Panel, or Creatinine) in this uploaded file.\n\n"
+                    "The system did not detect any standard laboratory test values in this uploaded file.\n\n"
                     "**Guidance:**\n"
                     "• Ensure the uploaded document is a genuine laboratory or pathology test report.\n"
                     "• If uploading an image or scan, ensure the text and numbers are sharp, upright, and clearly legible.\n"
@@ -184,93 +469,30 @@ class ReportAnalysisService:
         abnormal_count = len(abnormal_items)
         risk_level = "EMERGENCY" if critical_items else ("HIGH" if abnormal_count >= 3 else ("MODERATE" if abnormal_count > 0 else "LOW"))
 
-        # Build prompt for AI provider
-        extracted_summary_text = "\n".join([
-            f"- {v['parameter_name']}: {v['measured_value']} {v['unit']} (Ref: {v['ref_range_text']}) -> {v['flag']}"
-            for v in test_values
-        ])
+        abnormal_descriptions = []
+        for item in abnormal_items:
+            direction = "elevated (above reference range)" if item.get("flag") == "HIGH" else ("at critical threshold" if item.get("flag") == "CRITICAL" else "below normal reference limits")
+            abnormal_descriptions.append(
+                f"• {item['parameter_name']} is currently measured at {item.get('measured_text', item.get('measured_value'))} {item.get('unit', '')}, which is {direction}."
+            )
 
-        system_instruction = (
-            "You are a compassionate medical information assistant. Explain the following laboratory report "
-            "in simple, reassuring English. "
-            "CRITICAL MEDICAL SAFETY REQUIREMENTS:\n"
-            "1. Explain what each out-of-range value means in simple terms.\n"
-            "2. EXPLICITLY state that abnormal test results do NOT automatically establish a medical diagnosis.\n"
-            "3. Do not invent diagnoses, medications, or specific dosages.\n"
-            "4. If any values are critical, advise immediate emergency care.\n"
-            "5. Advise the patient to consult their qualified treating physician for full clinical interpretation."
-        )
-
-        ai_response_text = None
-        ai_provider_used = "Rule-based Clinical Engine"
-
-        # 1. Try Gemini if configured
-        if Config.AI_PROVIDER == "gemini" and Config.GEMINI_API_KEY:
-            try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{Config.GEMINI_MODEL}:generateContent?key={Config.GEMINI_API_KEY}"
-                payload = {
-                    "contents": [{
-                        "parts": [
-                            {"text": f"{system_instruction}\n\nReport Filename: {original_filename}\nExtracted Lab Values:\n{extracted_summary_text}"}
-                        ]
-                    }],
-                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 800}
-                }
-                res = requests.post(url, json=payload, timeout=12)
-                if res.status_code == 200:
-                    data = res.json()
-                    candidates = data.get("candidates", [])
-                    if candidates and "content" in candidates[0]:
-                        parts = candidates[0]["content"].get("parts", [])
-                        if parts:
-                            ai_response_text = parts[0].get("text")
-                            ai_provider_used = f"Google Gemini ({Config.GEMINI_MODEL})"
-            except Exception as e:
-                logger.warning("Gemini API call failed (%s). Falling back to clinical rules engine.", e)
-
-        # 2. Try Ollama if configured
-        elif Config.AI_PROVIDER == "ollama":
-            try:
-                ollama_url = f"{Config.OLLAMA_BASE_URL}/api/generate"
-                payload = {
-                    "model": Config.OLLAMA_MODEL,
-                    "prompt": f"{system_instruction}\n\nExtracted Values:\n{extracted_summary_text}",
-                    "stream": False
-                }
-                res = requests.post(ollama_url, json=payload, timeout=15)
-                if res.status_code == 200:
-                    ai_response_text = res.json().get("response")
-                    ai_provider_used = f"Ollama ({Config.OLLAMA_MODEL})"
-            except Exception as e:
-                logger.warning("Ollama call failed (%s). Falling back to clinical rules engine.", e)
-
-        # 3. Clinical Rules Engine Fallback (Deterministic, Safe, Always Available)
-        if not ai_response_text:
-            abnormal_descriptions = []
-            for item in abnormal_items:
-                direction = "elevated (above reference range)" if item["flag"] == "HIGH" else "below normal reference limits"
-                abnormal_descriptions.append(
-                    f"• {item['parameter_name']} is currently measured at {item['measured_value']} {item['unit']}, which is {direction}."
-                )
-
-            if abnormal_descriptions:
-                summary = (
-                    f"Your medical report has been processed. Of the {len(test_values)} parameters analyzed, "
-                    f"{len(abnormal_items)} parameter(s) are outside standard laboratory reference intervals:\n\n"
-                    + "\n".join(abnormal_descriptions)
-                    + "\n\n"
-                    "IMPORTANT HEALTH NOTE:\n"
-                    "Laboratory values can fluctuate due to hydration, diet, stress, time of day, and recent physical exertion. "
-                    "An abnormal result does NOT automatically establish a disease or diagnosis. "
-                    "These findings should be evaluated by your healthcare provider in conjunction with your personal clinical history."
-                )
-            else:
-                summary = (
-                    f"Good news! All {len(test_values)} tested parameters in this report are currently within their standard laboratory reference intervals. "
-                    "Remember that normal lab results should still be viewed in the context of your overall physical well-being. "
-                    "Maintain routine wellness checkups and discuss any persistent symptoms with your doctor."
-                )
-            ai_response_text = summary
+        if abnormal_descriptions:
+            summary = (
+                f"Your medical report has been processed. Of the {len(test_values)} parameters analyzed, "
+                f"{len(abnormal_items)} parameter(s) are outside standard laboratory reference intervals:\n\n"
+                + "\n".join(abnormal_descriptions)
+                + "\n\n"
+                "IMPORTANT HEALTH NOTE:\n"
+                "Laboratory values can fluctuate due to hydration, diet, stress, time of day, and recent physical exertion. "
+                "An abnormal result does NOT automatically establish a disease or diagnosis. "
+                "These findings should be evaluated by your healthcare provider in conjunction with your personal clinical history."
+            )
+        else:
+            summary = (
+                f"Good news! All {len(test_values)} tested parameters in this report are currently within their standard laboratory reference intervals. "
+                "Remember that normal lab results should still be viewed in the context of your overall physical well-being. "
+                "Maintain routine wellness checkups and discuss any persistent symptoms with your doctor."
+            )
 
         urgent_flags = ""
         if critical_items:
@@ -283,12 +505,12 @@ class ReportAnalysisService:
         recommendations = (
             "1. Schedule a consultation with a registered doctor to discuss these findings in clinical context.\n"
             "2. Do not start, discontinue, or alter dosages of any medication without professional guidance.\n"
-            "3. If you experience acute symptoms (e.g. chest pain, breathing difficulty, dizziness), seek immediate emergency care."
+            "3. If you experience acute symptoms (e.g. fever, acute pain, dizziness), seek immediate medical care."
         )
 
         return {
-            "ai_provider": ai_provider_used,
-            "summary_plain_en": ai_response_text,
+            "ai_provider": "Rule-based Clinical Engine",
+            "summary_plain_en": summary,
             "clinical_notes": f"Analyzed {len(test_values)} parameters. Found {abnormal_count} out-of-range parameters.",
             "abnormal_count": abnormal_count,
             "urgent_flags": urgent_flags,

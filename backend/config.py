@@ -47,7 +47,7 @@ class Config:
     AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").lower()
     _raw_gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
     GEMINI_API_KEY = "" if _raw_gemini_key.startswith("PASTE_") else _raw_gemini_key
-    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
     OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "med-ai")
 

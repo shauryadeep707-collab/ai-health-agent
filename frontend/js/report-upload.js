@@ -103,6 +103,8 @@ const ReportUpload = {
 
     const values = data.test_values || [];
     const analysis = data.ai_analysis || {};
+    const reportTitle = data.test_type || "Diagnostic Investigation";
+    const reportDate = data.report_date ? data.report_date.split('T')[0] : "";
 
     const hasValues = values.length > 0;
 
@@ -112,28 +114,54 @@ const ReportUpload = {
       if (v.flag === "LOW") badgeClass = "badge-pending";
       if (v.flag === "CRITICAL") badgeClass = "badge-rejected";
 
+      const valDisplay = v.measured_text || (v.measured_value !== null ? v.measured_value : "-");
+
       return `
         <tr>
           <td><strong>${v.parameter_name}</strong></td>
-          <td><strong>${v.measured_value}</strong> ${v.unit}</td>
+          <td><strong>${valDisplay}</strong> ${v.unit || ''}</td>
           <td>${v.ref_range_text || '-'}</td>
-          <td><span class="badge ${badgeClass}">${v.flag}</span></td>
+          <td><span class="badge ${badgeClass}">${v.flag || 'NORMAL'}</span></td>
         </tr>
       `;
     }).join("");
 
     container.innerHTML = `
-      <div class="panel" style="border-top: 4px solid var(--primary);">
-        <div class="panel-header">
+      <div class="panel" style="border-top: 4px solid var(--primary); box-shadow:0 4px 14px rgba(0,0,0,0.06);">
+        <div class="panel-header" style="flex-wrap:wrap; gap:1rem; align-items:flex-start;">
           <div>
-            <h3 class="panel-title">🔬 Extracted Findings: ${data.original_filename}</h3>
-            <span style="font-size:0.85rem; color:var(--slate-400);">AI Provider: ${analysis.ai_provider}</span>
+            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.35rem;">
+              <span class="badge" style="background:#e0f2fe; color:#0284c7; font-weight:700; font-size:0.85rem; border:1px solid #bae6fd;">
+                🏷️ Pathology Test
+              </span>
+              ${reportDate ? `
+                <span class="badge" style="background:#f1f5f9; color:#475569; font-weight:600; font-size:0.8rem;">
+                  🗓️ Test Date: ${reportDate}
+                </span>
+              ` : ''}
+              <span class="badge" style="background:#f8fafc; color:#64748b; font-size:0.8rem; border:1px solid #e2e8f0;">
+                🤖 ${analysis.ai_provider || 'Clinical Engine'}
+              </span>
+            </div>
+            <h3 class="panel-title" style="font-size:1.35rem; font-weight:800; color:var(--dark); margin:0.25rem 0 0.35rem;">
+              🔬 ${reportTitle}
+            </h3>
+            <div style="font-size:0.85rem; color:var(--slate-500);">
+              📄 <em>Source Document:</em> ${data.original_filename}
+            </div>
           </div>
-          ${hasValues ? `
-          <button onclick="ReportUpload.confirmReport('${data.report_id}')" id="confirm-btn-${data.report_id}" class="btn btn-secondary btn-sm">
-            ✅ Confirm Extracted Facts
-          </button>
-          ` : ''}
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            ${data.report_id ? `
+              <button onclick="ReportUpload.openOriginalFile('${data.report_id}')" class="btn btn-outline btn-sm" style="display:inline-flex; align-items:center; gap:0.35rem;">
+                👁️ View Original Report Image
+              </button>
+            ` : ''}
+            ${hasValues && data.report_id ? `
+              <button onclick="ReportUpload.confirmReport('${data.report_id}')" id="confirm-btn-${data.report_id}" class="btn btn-secondary btn-sm">
+                ✅ Confirm Findings
+              </button>
+            ` : ''}
+          </div>
         </div>
 
         ${hasValues ? `
@@ -154,7 +182,7 @@ const ReportUpload = {
         </div>
         ` : `
         <div class="alert alert-warning" style="margin-bottom:1.5rem;">
-          ⚠️ <strong>Non-Diagnostic or Unreadable Document:</strong> No clinical laboratory values (such as Glucose, Hemoglobin, or Lipid Panel) were detected in this image. Please upload a clear, legible digital PDF or sharp photo of a genuine pathology test report.
+          ⚠️ <strong>Non-Diagnostic or Unreadable Document:</strong> No clinical laboratory values were detected in this image. Please upload a clear digital PDF or sharp photo of a genuine pathology test report.
         </div>
         `}
 
@@ -228,6 +256,7 @@ const ReportUpload = {
           const riskClass = r.risk_level === 'LOW' ? 'badge-verified' : (r.risk_level === 'MODERATE' ? 'badge-pending' : 'badge-rejected');
           const abnormalText = r.abnormal_count > 0 ? `<span style="color:#dc2626; font-weight:600;">⚠️ ${r.abnormal_count} abnormal</span>` : `<span style="color:#16a34a; font-weight:600;">✓ All normal</span>`;
           const paramCount = r.test_count ? `${r.test_count} parameters` : '';
+          const reportTitle = r.test_type || "Diagnostic Investigation";
 
           return `
           <div class="panel" style="margin-bottom:1rem; padding:1.25rem; border-left:4px solid ${r.risk_level === 'LOW' ? 'var(--success)' : (r.risk_level === 'MODERATE' ? '#f59e0b' : '#ef4444')};">
@@ -244,11 +273,11 @@ const ReportUpload = {
                     ${abnormalText} ${paramCount ? '• ' + paramCount : ''}
                   </span>
                 </div>
-                <h4 style="font-size:1.05rem; font-weight:700; color:var(--dark); margin:0.25rem 0;">
-                  📄 ${r.original_filename}
+                <h4 style="font-size:1.15rem; font-weight:800; color:var(--dark); margin:0.3rem 0;">
+                  🏷️ ${reportTitle}
                 </h4>
                 <div style="font-size:0.85rem; color:var(--slate-600); margin-bottom:0.4rem;">
-                  🧪 <strong>Test:</strong> ${r.test_type || 'General Diagnostic'} | ⏱️ <em>Uploaded:</em> ${uploadDateDisplay}
+                  📄 <em>Source File:</em> ${r.original_filename} | ⏱️ <em>Uploaded:</em> ${uploadDateDisplay}
                 </div>
                 ${r.summary_plain_en ? `
                   <p style="font-size:0.85rem; color:var(--slate-700); margin:0; line-height:1.4; background:#f8fafc; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid #e2e8f0;">
@@ -256,11 +285,14 @@ const ReportUpload = {
                   </p>
                 ` : ''}
               </div>
-              <div style="display:flex; flex-direction:column; gap:0.4rem; min-width:140px;">
-                <button onclick="ReportUpload.viewReportDetail('${r.report_id}')" class="btn btn-primary btn-sm">
-                  👁️ View Analysis
+              <div style="display:flex; flex-direction:column; gap:0.4rem; min-width:150px;">
+                <button onclick="ReportUpload.openOriginalFile('${r.report_id}')" class="btn btn-outline btn-sm" style="display:inline-flex; align-items:center; justify-content:center; gap:0.3rem;">
+                  👁️ View Report Image
                 </button>
-                <button onclick="ReportUpload.discussWithAI('${r.test_type || r.original_filename}', '${testDateDisplay}')" class="btn btn-outline btn-sm">
+                <button onclick="ReportUpload.viewReportDetail('${r.report_id}')" class="btn btn-primary btn-sm">
+                  📊 View Analysis
+                </button>
+                <button onclick="ReportUpload.discussWithAI('${reportTitle}', '${testDateDisplay}')" class="btn btn-outline btn-sm">
                   💬 Ask AI
                 </button>
               </div>
@@ -301,10 +333,12 @@ const ReportUpload = {
       const res = await Auth.fetchWithAuth(`/api/patient/reports/${reportId}`);
       if (!res) return;
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data.report) {
         this.renderAnalysisResult({
           report_id: data.report.report_id,
           original_filename: data.report.original_filename,
+          test_type: data.report.test_type,
+          report_date: data.report.report_date,
           test_values: data.test_values,
           ai_analysis: data.analysis
         });
@@ -312,6 +346,77 @@ const ReportUpload = {
     } catch (err) {
       alert("Error loading report: " + err.message);
     }
+  },
+
+  async openOriginalFile(reportId) {
+    if (!reportId) return;
+    const modal = document.getElementById("report-file-viewer-modal");
+    const content = document.getElementById("report-file-viewer-content");
+    const titleEl = document.getElementById("report-file-viewer-title");
+    const downloadLink = document.getElementById("report-file-download-btn");
+
+    const token = localStorage.getItem("token") || "";
+    const fileUrl = `/api/patient/reports/${reportId}/file?token=${encodeURIComponent(token)}`;
+
+    if (!modal || !content) {
+      window.open(fileUrl, "_blank");
+      return;
+    }
+
+    content.innerHTML = `
+      <div style="text-align:center; padding:3.5rem 1rem;">
+        <div class="spinner" style="margin:0 auto 1rem;"></div>
+        <p style="color:var(--slate-600); font-size:1rem; font-weight:600;">Loading original hospital document...</p>
+      </div>
+    `;
+    modal.classList.add("active");
+
+    if (downloadLink) {
+      downloadLink.href = fileUrl;
+      downloadLink.target = "_blank";
+    }
+
+    try {
+      const metaRes = await Auth.fetchWithAuth(`/api/patient/reports/${reportId}`);
+      let reportName = "Medical Report";
+      let isPdf = false;
+      if (metaRes) {
+        const metaData = await metaRes.json();
+        if (metaData && metaData.report) {
+          reportName = metaData.report.test_type || metaData.report.original_filename;
+          const fn = (metaData.report.original_filename || "").toLowerCase();
+          const ft = (metaData.report.file_type || "").toLowerCase();
+          isPdf = fn.endsWith(".pdf") || ft.includes("pdf");
+        }
+      }
+      if (titleEl) titleEl.innerText = `📄 ${reportName}`;
+
+      if (isPdf) {
+        content.innerHTML = `
+          <div style="width:100%; height:75vh; border-radius:8px; overflow:hidden; border:1px solid var(--slate-200);">
+            <iframe src="${fileUrl}" style="width:100%; height:100%; border:none;"></iframe>
+          </div>
+        `;
+      } else {
+        content.innerHTML = `
+          <div style="text-align:center; background:#0b1120; border-radius:12px; padding:1.25rem; max-height:76vh; overflow:auto; display:flex; justify-content:center; align-items:center;">
+            <img src="${fileUrl}" alt="Original Lab Report" style="max-width:100%; max-height:72vh; object-fit:contain; border-radius:8px; box-shadow:0 8px 30px rgba(0,0,0,0.6);" />
+          </div>
+        `;
+      }
+    } catch (err) {
+      content.innerHTML = `
+        <div class="alert alert-danger" style="margin:2rem 0;">
+          Failed to load preview: ${err.message}. 
+          <a href="${fileUrl}" target="_blank" class="btn btn-outline btn-sm" style="margin-left:1rem;">Open in New Tab</a>
+        </div>
+      `;
+    }
+  },
+
+  closeFileViewer() {
+    const modal = document.getElementById("report-file-viewer-modal");
+    if (modal) modal.classList.remove("active");
   },
 
   async compareParameter() {

@@ -44,6 +44,8 @@ def get_current_user_from_request():
         token = auth_header.split(" ", 1)[1].strip()
     elif "auth_token" in request.cookies:
         token = request.cookies.get("auth_token")
+    elif request.args.get("token"):
+        token = request.args.get("token").strip()
 
     if not token:
         return None

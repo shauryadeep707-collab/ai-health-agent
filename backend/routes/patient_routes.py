@@ -1,12 +1,13 @@
 import os
 import uuid
+from pathlib import Path
 from werkzeug.utils import secure_filename
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from backend.security.auth import jwt_required, role_required
 from backend.security.validation import validate_uploaded_file, sanitize_input
 from backend.services.report_analysis_service import ReportAnalysisService
 from backend.database.repositories import (
-    PatientProfileRepository, MedicalReportRepository, UserRepository
+    PatientProfileRepository, MedicalReportRepository, UserRepository, DoctorProfileRepository
 )
 from backend.security.audit import log_audit_event
 from backend.config import Config
@@ -85,8 +86,9 @@ def upload_medical_report():
     if not is_valid:
         return jsonify({"success": False, "error": err_msg}), 400
 
-    test_type = sanitize_input(request.form.get("test_type", "Comprehensive Diagnostic Report"))
-    report_date = request.form.get("report_date", None)
+    raw_user_type = request.form.get("test_type", "").strip()
+    user_test_type = sanitize_input(raw_user_type) if raw_user_type and raw_user_type != "Comprehensive Diagnostic Report" else ""
+    report_date = request.form.get("report_date", "").strip() or None
 
     # Secure storage
     safe_name = secure_filename(file_obj.filename)
@@ -99,18 +101,20 @@ def upload_medical_report():
     file_size = destination.stat().st_size
     mime_type = file_obj.mimetype or f"application/{ext}"
 
-    # Extract text
-    extracted_text = ReportAnalysisService.extract_text_from_file(str(destination), mime_type)
+    # Comprehensive multimodal AI & rule-engine extraction
+    analysis_result = ReportAnalysisService.analyze_report_comprehensive(
+        file_path=str(destination),
+        file_type=mime_type,
+        original_filename=safe_name,
+        user_test_type=user_test_type,
+        user_report_date=report_date
+    )
 
-    # Auto-extract test date from report text if not explicitly provided
-    if not report_date:
-        report_date = ReportAnalysisService.extract_report_date(extracted_text) or None
-
-    # Parse parameters
-    parsed_values = ReportAnalysisService.parse_lab_parameters(extracted_text)
-
-    # AI Plain English Analysis
-    ai_analysis = ReportAnalysisService.generate_ai_explanation(parsed_values, safe_name)
+    final_test_type = analysis_result.get("detected_title") or user_test_type or "Diagnostic Lab Report"
+    final_report_date = analysis_result.get("test_date") or report_date
+    parsed_values = analysis_result.get("parameters", [])
+    ai_analysis = analysis_result.get("ai_analysis", {})
+    extracted_text = analysis_result.get("extracted_text", "")
 
     # Save to Database
     report_id = MedicalReportRepository.create_report(
@@ -120,8 +124,8 @@ def upload_medical_report():
         file_path=str(destination),
         file_size_bytes=file_size,
         file_type=mime_type,
-        test_type=test_type,
-        report_date=report_date,
+        test_type=final_test_type,
+        report_date=final_report_date,
         ocr_raw_text=extracted_text
     )
 
@@ -129,18 +133,18 @@ def upload_medical_report():
 
     MedicalReportRepository.save_analysis(
         report_id=report_id,
-        ai_provider=ai_analysis["ai_provider"],
-        summary_plain_en=ai_analysis["summary_plain_en"],
-        clinical_notes=ai_analysis["clinical_notes"],
-        abnormal_count=ai_analysis["abnormal_count"],
-        urgent_flags=ai_analysis["urgent_flags"],
-        risk_level=ai_analysis["risk_level"],
-        recommendations=ai_analysis["recommendations"]
+        ai_provider=ai_analysis.get("ai_provider", "Clinical Engine"),
+        summary_plain_en=ai_analysis.get("summary_plain_en", ""),
+        clinical_notes=ai_analysis.get("clinical_notes", ""),
+        abnormal_count=ai_analysis.get("abnormal_count", 0),
+        urgent_flags=ai_analysis.get("urgent_flags", ""),
+        risk_level=ai_analysis.get("risk_level", "LOW"),
+        recommendations=ai_analysis.get("recommendations", "")
     )
 
     log_audit_event(
         "MEDICAL_REPORT_UPLOADED", "MEDICAL_REPORTS", report_id, "SUCCESS",
-        {"filename": safe_name, "test_type": test_type, "risk_level": ai_analysis["risk_level"]}
+        {"filename": safe_name, "test_type": final_test_type, "risk_level": ai_analysis.get("risk_level", "LOW")}
     )
 
     return jsonify({
@@ -148,11 +152,50 @@ def upload_medical_report():
         "message": "Report uploaded and analyzed successfully.",
         "report_id": report_id,
         "original_filename": safe_name,
-        "test_type": test_type,
+        "test_type": final_test_type,
         "test_values": parsed_values,
         "ai_analysis": ai_analysis,
+        "file_url": f"/api/patient/reports/{report_id}/file",
         "extracted_text_preview": extracted_text[:300] if extracted_text else ""
     }), 201
+
+@patient_bp.route("/reports/<report_id>/file", methods=["GET"])
+@jwt_required
+def view_report_file(report_id):
+    """
+    Serves the original uploaded medical report (Image or PDF) securely
+    to the authorized patient or a verified doctor.
+    """
+    user = request.current_user
+    report = MedicalReportRepository.find_by_id(report_id)
+    if not report:
+        return jsonify({"success": False, "error": "Report not found."}), 404
+
+    if user["role"] == "PATIENT":
+        pat = PatientProfileRepository.find_by_user_id(user["user_id"])
+        if not pat or report["patient_id"] != pat["patient_id"]:
+            return jsonify({"success": False, "error": "Access unauthorized."}), 403
+    elif user["role"] == "DOCTOR":
+        doc = DoctorProfileRepository.find_by_user_id(user["user_id"])
+        if not doc or doc.get("verification_status") != "VERIFIED":
+            return jsonify({"success": False, "error": "Only verified doctors can view clinical reports."}), 403
+
+    raw_path = report.get("file_path")
+    file_path = Path(raw_path) if raw_path else None
+    if not file_path or not file_path.exists():
+        stored_name = report.get("stored_filename", "")
+        file_path = Config.UPLOAD_FOLDER / stored_name
+
+    if not file_path.exists():
+        return jsonify({"success": False, "error": "Report file is not available on disk."}), 404
+
+    mimetype = report.get("file_type") or "application/octet-stream"
+    return send_file(
+        str(file_path),
+        mimetype=mimetype,
+        as_attachment=False,
+        download_name=report.get("original_filename")
+    )
 
 @patient_bp.route("/reports/<report_id>/confirm", methods=["POST"])
 @jwt_required
