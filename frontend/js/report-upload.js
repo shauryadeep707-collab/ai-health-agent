@@ -106,6 +106,7 @@ const ReportUpload = {
     const analysis = data.ai_analysis || {};
     const reportTitle = data.test_type || "Diagnostic Investigation";
     const reportDate = data.report_date ? data.report_date.split('T')[0] : "";
+    const rawText = data.ocr_raw_text || data.extracted_text || "";
 
     const hasValues = values.length > 0;
 
@@ -147,8 +148,13 @@ const ReportUpload = {
             <h3 class="panel-title" style="font-size:1.35rem; font-weight:800; color:var(--dark); margin:0.25rem 0 0.35rem;">
               🔬 ${reportTitle}
             </h3>
-            <div style="font-size:0.85rem; color:var(--slate-500);">
-              📄 <em>Source Document:</em> ${data.original_filename}
+            <div style="font-size:0.85rem; color:var(--slate-500); display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+              <span>📄 <em>Source Document:</em> ${data.original_filename}</span>
+              ${reportTitle && reportTitle.toLowerCase() !== (data.original_filename || '').toLowerCase() ? `
+                <span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700; font-size:0.75rem; border:1px solid #bae6fd;">
+                  ✨ AI Smart Title: ${reportTitle}
+                </span>
+              ` : ''}
             </div>
           </div>
           <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
@@ -189,12 +195,28 @@ const ReportUpload = {
 
         <div style="background-color:var(--slate-100); border-radius:var(--radius-md); padding:1.25rem; margin-bottom:1.25rem;">
           <h4 style="font-size:1.05rem; font-weight:700; color:var(--dark); margin-bottom:0.5rem;">
-            🤖 AI Plain English Explanation
+            🤖 AI Plain English Explanation (What This Report Tells You)
           </h4>
           <p style="white-space:pre-line; line-height:1.6; font-size:0.95rem; color:var(--slate-700);">
             ${analysis.summary_plain_en}
           </p>
         </div>
+
+        ${rawText ? `
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:var(--radius-md); margin-bottom:1.25rem; overflow:hidden;">
+          <div style="padding:0.75rem 1rem; background:#f8fafc; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="const b = document.getElementById('raw-ocr-text-box'); if(b) b.style.display = (b.style.display === 'none' ? 'block' : 'none');">
+            <span style="font-size:0.9rem; font-weight:700; color:var(--slate-800); display:flex; align-items:center; gap:0.4rem;">
+              📑 Verbatim Extracted Text (Exact Words Read Directly from File)
+            </span>
+            <span style="font-size:0.78rem; color:var(--primary); font-weight:600;">
+              Show / Hide Exact Words ▼
+            </span>
+          </div>
+          <div id="raw-ocr-text-box" style="display:none; padding:1rem; background:#f8fafc; font-family:Consolas, Monaco, monospace; font-size:0.82rem; color:#334155; max-height:220px; overflow-y:auto; white-space:pre-wrap; border-top:1px solid #e2e8f0; line-height:1.5;">
+${rawText}
+          </div>
+        </div>
+        ` : ''}
 
         ${analysis.urgent_flags ? `
           <div class="alert alert-warning" style="margin-bottom:1rem;">
@@ -342,7 +364,8 @@ const ReportUpload = {
           test_type: data.report.test_type,
           report_date: data.report.report_date,
           test_values: data.test_values,
-          ai_analysis: data.analysis
+          ai_analysis: data.analysis,
+          ocr_raw_text: data.report.ocr_raw_text
         });
         window.scrollTo({ top: 300, behavior: 'smooth' });
       }

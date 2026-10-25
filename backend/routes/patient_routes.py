@@ -157,6 +157,8 @@ def upload_medical_report():
         "test_values": parsed_values,
         "ai_analysis": ai_analysis,
         "file_url": f"/api/patient/reports/{report_id}/file",
+        "ocr_raw_text": extracted_text,
+        "extracted_text": extracted_text,
         "extracted_text_preview": extracted_text[:300] if extracted_text else ""
     }), 201
 
