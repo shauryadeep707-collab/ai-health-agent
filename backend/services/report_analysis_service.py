@@ -40,6 +40,35 @@ class ReportAnalysisService:
     """
 
     @staticmethod
+    def extract_report_date(ocr_text: str) -> str:
+        """Extracts report test date from lab text (e.g. 2026-10-25 or 15/10/2026 or 15-Oct-2026)."""
+        if not ocr_text:
+            return ""
+        date_patterns = [
+            r'(?:Date\s*(?:of\s*Collection|Collected|Reported|of\s*Test)?|Test\s*Date|Specimen\s*Date|Sample\s*Date)\s*[:\-]?\s*(\d{4}[-/]\d{1,2}[-/]\d{1,2})',
+            r'(?:Date\s*(?:of\s*Collection|Collected|Reported|of\s*Test)?|Test\s*Date|Specimen\s*Date|Sample\s*Date)\s*[:\-]?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})',
+            r'(?:Date\s*(?:of\s*Collection|Collected|Reported|of\s*Test)?|Test\s*Date)\s*[:\-]?\s*(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4})',
+            r'\b(\d{4}-\d{2}-\d{2})\b',
+            r'\b(\d{1,2}[/-]\d{1,2}[/-]\d{4})\b'
+        ]
+        for pattern in date_patterns:
+            match = re.search(pattern, ocr_text, re.IGNORECASE)
+            if match:
+                raw_d = match.group(1).strip()
+                try:
+                    from datetime import datetime
+                    for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y", "%d-%m-%y", "%d %b %Y", "%d %B %Y"):
+                        try:
+                            dt = datetime.strptime(raw_d, fmt)
+                            return dt.strftime("%Y-%m-%d")
+                        except ValueError:
+                            pass
+                except Exception:
+                    pass
+                return raw_d
+        return ""
+
+    @staticmethod
     def extract_text_from_file(file_path: str, file_type: str) -> str:
         """Extracts text content from a PDF or image file."""
         text = ""

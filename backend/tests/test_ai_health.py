@@ -1,3 +1,6 @@
+import os
+os.environ["DB_TYPE"] = "sqlite"
+
 import io
 import json
 import pytest

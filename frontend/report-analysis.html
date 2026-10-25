@@ -103,6 +103,34 @@
       </div>
       <div id="comparison-results"></div>
     </div>
+
+    <!-- Dedicated Section for Provided Reports Arranged by Test Date -->
+    <div class="panel" id="provided-reports-section" style="max-width:800px; margin:2rem auto 0;">
+      <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+        <div>
+          <h3 class="panel-title" style="margin-bottom:0.25rem;">📋 Provided Medical Reports & Test Records</h3>
+          <p style="font-size:0.85rem; color:var(--slate-500); margin:0;">
+            All laboratory reports provided by you, organized chronologically by test date.
+          </p>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+          <label for="reports-sort-select" style="font-size:0.85rem; font-weight:600; color:var(--slate-600); white-space:nowrap;">
+            Arrange By:
+          </label>
+          <select id="reports-sort-select" class="form-control" style="width:auto; padding:0.4rem 0.75rem; font-size:0.85rem;" onchange="ReportUpload.loadHistory(this.value)">
+            <option value="date_desc" selected>📅 Test Date (Newest First)</option>
+            <option value="date_asc">📅 Test Date (Oldest First)</option>
+            <option value="upload_desc">⏱️ Upload Date (Recent First)</option>
+          </select>
+          <button onclick="ReportUpload.loadHistory()" class="btn btn-outline btn-sm" title="Refresh reports list">
+            🔄 Refresh
+          </button>
+        </div>
+      </div>
+      <div id="reports-history-list" style="margin-top:1rem;">
+        <!-- Populated dynamically by ReportUpload.loadHistory() -->
+      </div>
+    </div>
   </main>
 
   <script src="js/auth.js"></script>

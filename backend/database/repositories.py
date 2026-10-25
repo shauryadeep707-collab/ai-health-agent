@@ -323,13 +323,21 @@ class MedicalReportRepository:
         return db_manager.execute_query(query, {"report_id": report_id}, fetchone=True)
 
     @staticmethod
-    def list_by_patient(patient_id):
-        query = """
-        SELECT r.*, a.risk_level, a.abnormal_count, a.summary_plain_en 
+    def list_by_patient(patient_id, sort_by="date_desc"):
+        if sort_by == "date_asc":
+            order_clause = "ORDER BY COALESCE(r.report_date, '1970-01-01') ASC, r.upload_timestamp ASC"
+        elif sort_by == "upload_desc":
+            order_clause = "ORDER BY r.upload_timestamp DESC"
+        else:  # default: date_desc (arranged according to test date, newest first)
+            order_clause = "ORDER BY COALESCE(r.report_date, '1970-01-01') DESC, r.upload_timestamp DESC"
+
+        query = f"""
+        SELECT r.*, a.risk_level, a.abnormal_count, a.summary_plain_en, a.recommendations,
+               (SELECT COUNT(*) FROM REPORT_TEST_VALUES v WHERE v.report_id = r.report_id) as test_count
         FROM MEDICAL_REPORTS r
         LEFT JOIN REPORT_ANALYSES a ON r.report_id = a.report_id
         WHERE r.patient_id = :patient_id
-        ORDER BY r.upload_timestamp DESC
+        {order_clause}
         """
         return db_manager.execute_query(query, {"patient_id": patient_id}, fetchall=True)
 

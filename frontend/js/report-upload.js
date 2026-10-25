@@ -205,43 +205,94 @@ const ReportUpload = {
     }
   },
 
-  async loadHistory() {
+  async loadHistory(sortBy = null) {
     const listContainer = document.getElementById("reports-history-list");
     if (!listContainer) return;
 
+    if (!sortBy) {
+      const selectEl = document.getElementById("reports-sort-select");
+      sortBy = selectEl ? selectEl.value : "date_desc";
+    }
+
+    listContainer.innerHTML = `<p style="color:var(--slate-500); padding:1rem 0;">⏳ Loading provided medical reports...</p>`;
+
     try {
-      const res = await Auth.fetchWithAuth("/api/patient/reports");
+      const res = await Auth.fetchWithAuth(`/api/patient/reports?sort=${encodeURIComponent(sortBy)}`);
       if (!res) return;
       const data = await res.json();
 
-      if (data.success && data.reports.length > 0) {
-        listContainer.innerHTML = data.reports.map(r => `
-          <div class="panel" style="margin-bottom:1rem; padding:1.25rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-              <div>
-                <h4 style="font-size:1rem; font-weight:700; color:var(--dark); margin-bottom:0.25rem;">
+      if (data.success && data.reports && data.reports.length > 0) {
+        listContainer.innerHTML = data.reports.map(r => {
+          const testDateDisplay = r.report_date ? r.report_date.split('T')[0] : 'Not specified';
+          const uploadDateDisplay = r.upload_timestamp ? (r.upload_timestamp.split('T')[0] || r.upload_timestamp) : '';
+          const riskClass = r.risk_level === 'LOW' ? 'badge-verified' : (r.risk_level === 'MODERATE' ? 'badge-pending' : 'badge-rejected');
+          const abnormalText = r.abnormal_count > 0 ? `<span style="color:#dc2626; font-weight:600;">⚠️ ${r.abnormal_count} abnormal</span>` : `<span style="color:#16a34a; font-weight:600;">✓ All normal</span>`;
+          const paramCount = r.test_count ? `${r.test_count} parameters` : '';
+
+          return `
+          <div class="panel" style="margin-bottom:1rem; padding:1.25rem; border-left:4px solid ${r.risk_level === 'LOW' ? 'var(--success)' : (r.risk_level === 'MODERATE' ? '#f59e0b' : '#ef4444')};">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.75rem;">
+              <div style="flex:1; min-width:260px;">
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
+                  <span class="badge" style="background:#e0f2fe; color:#0284c7; font-weight:700; font-size:0.85rem; border:1px solid #bae6fd;">
+                    🗓️ Test Date: ${testDateDisplay}
+                  </span>
+                  <span class="badge ${riskClass}">
+                    ${r.risk_level || 'ANALYZED'}
+                  </span>
+                  <span style="font-size:0.8rem; color:var(--slate-500);">
+                    ${abnormalText} ${paramCount ? '• ' + paramCount : ''}
+                  </span>
+                </div>
+                <h4 style="font-size:1.05rem; font-weight:700; color:var(--dark); margin:0.25rem 0;">
                   📄 ${r.original_filename}
                 </h4>
-                <span style="font-size:0.8rem; color:var(--slate-400);">
-                  Uploaded on ${r.upload_timestamp.split('T')[0] || r.upload_timestamp} | Test: ${r.test_type || 'General'}
-                </span>
+                <div style="font-size:0.85rem; color:var(--slate-600); margin-bottom:0.4rem;">
+                  🧪 <strong>Test:</strong> ${r.test_type || 'General Diagnostic'} | ⏱️ <em>Uploaded:</em> ${uploadDateDisplay}
+                </div>
+                ${r.summary_plain_en ? `
+                  <p style="font-size:0.85rem; color:var(--slate-700); margin:0; line-height:1.4; background:#f8fafc; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid #e2e8f0;">
+                    💡 <strong>Summary:</strong> ${r.summary_plain_en.length > 180 ? r.summary_plain_en.slice(0, 180) + '...' : r.summary_plain_en}
+                  </p>
+                ` : ''}
               </div>
-              <div style="display:flex; align-items:center; gap:0.5rem;">
-                <span class="badge ${r.risk_level === 'LOW' ? 'badge-verified' : (r.risk_level === 'MODERATE' ? 'badge-pending' : 'badge-rejected')}">
-                  ${r.risk_level || 'ANALYZED'}
-                </span>
-                <button onclick="ReportUpload.viewReportDetail('${r.report_id}')" class="btn btn-outline btn-sm">
-                  View Analysis
+              <div style="display:flex; flex-direction:column; gap:0.4rem; min-width:140px;">
+                <button onclick="ReportUpload.viewReportDetail('${r.report_id}')" class="btn btn-primary btn-sm">
+                  👁️ View Analysis
+                </button>
+                <button onclick="ReportUpload.discussWithAI('${r.test_type || r.original_filename}', '${testDateDisplay}')" class="btn btn-outline btn-sm">
+                  💬 Ask AI
                 </button>
               </div>
             </div>
           </div>
-        `).join("");
+        `;
+        }).join("");
       } else {
-        listContainer.innerHTML = `<p style="color:var(--slate-400); text-align:center; padding:2rem;">No previous medical reports uploaded.</p>`;
+        listContainer.innerHTML = `
+          <div style="text-align:center; padding:2.5rem 1rem; background:#f8fafc; border-radius:8px; border:1px dashed #cbd5e1;">
+            <div style="font-size:2rem; margin-bottom:0.5rem;">📁</div>
+            <h4 style="color:var(--dark); margin-bottom:0.25rem;">No Medical Reports Provided Yet</h4>
+            <p style="color:var(--slate-500); font-size:0.9rem; max-width:400px; margin:0 auto 1rem;">
+              Upload your blood test or diagnostic report above. It will be analyzed and cataloged here by test date.
+            </p>
+          </div>
+        `;
       }
     } catch (err) {
       console.error("Failed to load report history:", err);
+      listContainer.innerHTML = `<div class="alert alert-danger">Error loading reports: ${err.message}</div>`;
+    }
+  },
+
+  discussWithAI(testName, testDate) {
+    if (typeof switchTab === "function") {
+      switchTab("ai-assistant");
+    }
+    const input = document.getElementById("chat-user-input");
+    if (input) {
+      input.value = `Can you explain the findings of my ${testName} dated ${testDate}?`;
+      input.focus();
     }
   },
 

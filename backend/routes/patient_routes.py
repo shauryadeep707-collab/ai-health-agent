@@ -102,6 +102,10 @@ def upload_medical_report():
     # Extract text
     extracted_text = ReportAnalysisService.extract_text_from_file(str(destination), mime_type)
 
+    # Auto-extract test date from report text if not explicitly provided
+    if not report_date:
+        report_date = ReportAnalysisService.extract_report_date(extracted_text) or None
+
     # Parse parameters
     parsed_values = ReportAnalysisService.parse_lab_parameters(extracted_text)
 
@@ -173,8 +177,11 @@ def confirm_report_values(report_id):
 def list_patient_reports():
     user = request.current_user
     pat = PatientProfileRepository.find_by_user_id(user["user_id"])
-    reports = MedicalReportRepository.list_by_patient(pat["patient_id"])
-    return jsonify({"success": True, "reports": reports})
+    if not pat:
+        return jsonify({"success": False, "error": "Patient profile not found."}), 404
+    sort_by = request.args.get("sort", "date_desc").strip()
+    reports = MedicalReportRepository.list_by_patient(pat["patient_id"], sort_by=sort_by)
+    return jsonify({"success": True, "reports": reports, "sort_by": sort_by})
 
 @patient_bp.route("/reports/<report_id>", methods=["GET"])
 @jwt_required

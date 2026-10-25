@@ -531,6 +531,10 @@ class DatabaseManager:
         # Handle Supabase / PostgreSQL query translation
         if self.db_type in ("postgres", "postgresql", "supabase"):
             pg_query = re.sub(r':([a-zA-Z0-9_]+)', r'%(\1)s', query)
+            if re.search(r'\bINSERT\s+OR\s+IGNORE\s+INTO\b', pg_query, re.IGNORECASE):
+                pg_query = re.sub(r'\bINSERT\s+OR\s+IGNORE\s+INTO\b', 'INSERT INTO', pg_query, flags=re.IGNORECASE)
+                if not re.search(r'\bON\s+CONFLICT\b', pg_query, re.IGNORECASE):
+                    pg_query = pg_query.rstrip().rstrip(';') + ' ON CONFLICT DO NOTHING'
             with self.get_connection() as conn:
                 cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
                 cursor.execute(pg_query, params)
