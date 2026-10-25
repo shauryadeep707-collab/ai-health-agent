@@ -62,3 +62,7 @@ $RECYCLE.BIN/
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Local viva documentation & reports
+*.pdf
+generate_complete_project_pdf.py
