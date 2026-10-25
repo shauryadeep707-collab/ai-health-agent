@@ -53,14 +53,14 @@ class ReportAnalysisService:
                 pages_text = [page.extract_text() or "" for page in reader.pages]
                 text = "\n".join(pages_text).strip()
             except Exception as e:
-                logger.error("Error reading PDF with pypdf: %s", e)
+                logger.warning("Error reading PDF with pypdf (%s), attempting text stream extraction.", e)
+                try:
+                    text = path.read_text(errors="ignore")
+                except Exception:
+                    pass
 
-        # Fallback or additional parser if text is very sparse or empty
-        if not text:
-            # For development test files or OCR fallback, provide descriptive parsed text
-            text = f"Laboratory Report: {path.name}\nDiagnostic blood chemistry test document."
-
-        return text
+        # If no text was extracted (e.g. image without embedded text layer), return empty string
+        return text.strip()
 
     @staticmethod
     def parse_lab_parameters(raw_text: str) -> list[dict]:
@@ -121,20 +121,7 @@ class ReportAnalysisService:
                         seen_keys.add(key)
                         break
 
-        # If regex matching found nothing (e.g. non-standard format or scan), provide default panel based on text content
-        if not extracted:
-            for key, dict_info in list(STANDARD_LAB_DICTIONARY.items())[:4]:
-                extracted.append({
-                    "parameter_name": dict_info["name"],
-                    "measured_value": round((dict_info["min"] + dict_info["max"]) / 2, 1),
-                    "measured_text": str(round((dict_info["min"] + dict_info["max"]) / 2, 1)),
-                    "unit": dict_info["unit"],
-                    "ref_range_min": dict_info["min"],
-                    "ref_range_max": dict_info["max"],
-                    "ref_range_text": f"{dict_info['min']} - {dict_info['max']} {dict_info['unit']}",
-                    "flag": "NORMAL"
-                })
-
+        # Return empty list if no genuine clinical lab parameters matched
         return extracted
 
     @staticmethod
@@ -142,7 +129,26 @@ class ReportAnalysisService:
         """
         Sends extracted parameters to AI model (Gemini / Ollama / Fallback) to create a plain English summary,
         abnormal counts, urgent flags, and clear non-diagnostic medical disclaimers.
+        If no lab parameters were detected, returns an honest validation advisory.
         """
+        if not test_values:
+            return {
+                "ai_provider": "Clinical Diagnostic Validator",
+                "summary_plain_en": (
+                    "⚠️ **No Diagnostic Laboratory Parameters Detected**\n\n"
+                    "The system did not detect any standard laboratory test values (such as Blood Glucose, Hemoglobin, Lipid Panel, or Creatinine) in this uploaded file.\n\n"
+                    "**Guidance:**\n"
+                    "• Ensure the uploaded document is a genuine laboratory or pathology test report.\n"
+                    "• If uploading an image or scan, ensure the text and numbers are sharp, upright, and clearly legible.\n"
+                    "• Digital PDF reports directly from diagnostic laboratories yield the highest extraction accuracy."
+                ),
+                "clinical_notes": "Non-diagnostic or unreadable image uploaded. No clinical parameters extracted.",
+                "abnormal_count": 0,
+                "urgent_flags": None,
+                "risk_level": "LOW",
+                "recommendations": "Please upload a clear PDF or photo of an official diagnostic lab report."
+            }
+
         abnormal_items = [v for v in test_values if v.get("flag") in ("LOW", "HIGH", "CRITICAL")]
         critical_items = [v for v in test_values if v.get("flag") == "CRITICAL"]
 

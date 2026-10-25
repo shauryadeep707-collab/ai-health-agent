@@ -104,6 +104,8 @@ const ReportUpload = {
     const values = data.test_values || [];
     const analysis = data.ai_analysis || {};
 
+    const hasValues = values.length > 0;
+
     let tableRows = values.map(v => {
       let badgeClass = "badge-verified";
       if (v.flag === "HIGH") badgeClass = "badge-rejected";
@@ -127,11 +129,14 @@ const ReportUpload = {
             <h3 class="panel-title">🔬 Extracted Findings: ${data.original_filename}</h3>
             <span style="font-size:0.85rem; color:var(--slate-400);">AI Provider: ${analysis.ai_provider}</span>
           </div>
+          ${hasValues ? `
           <button onclick="ReportUpload.confirmReport('${data.report_id}')" id="confirm-btn-${data.report_id}" class="btn btn-secondary btn-sm">
             ✅ Confirm Extracted Facts
           </button>
+          ` : ''}
         </div>
 
+        ${hasValues ? `
         <div class="table-responsive" style="margin-bottom:1.5rem;">
           <table class="data-table">
             <thead>
@@ -143,10 +148,15 @@ const ReportUpload = {
               </tr>
             </thead>
             <tbody>
-              ${tableRows || '<tr><td colspan="4">No specific parameters isolated.</td></tr>'}
+              ${tableRows}
             </tbody>
           </table>
         </div>
+        ` : `
+        <div class="alert alert-warning" style="margin-bottom:1.5rem;">
+          ⚠️ <strong>Non-Diagnostic or Unreadable Document:</strong> No clinical laboratory values (such as Glucose, Hemoglobin, or Lipid Panel) were detected in this image. Please upload a clear, legible digital PDF or sharp photo of a genuine pathology test report.
+        </div>
+        `}
 
         <div style="background-color:var(--slate-100); border-radius:var(--radius-md); padding:1.25rem; margin-bottom:1.25rem;">
           <h4 style="font-size:1.05rem; font-weight:700; color:var(--dark); margin-bottom:0.5rem;">
