@@ -85,11 +85,10 @@ STANDARD_LAB_DICTIONARY = {
 }
 
 FALLBACK_GEMINI_MODELS = list(dict.fromkeys([
-    Config.GEMINI_MODEL,
     "gemini-3.5-flash-lite",
-    "gemini-3.8-flash",
     "gemini-3.5-flash",
-    "gemini-flash-latest"
+    Config.GEMINI_MODEL,
+    "gemini-3.8-flash"
 ]))
 
 
@@ -478,12 +477,27 @@ class ReportAnalysisService:
                 except Exception as ex:
                     logger.warning("Could not read image file for Gemini: %s", ex)
                     return None
+        elif "pdf" in file_type.lower() or file_path.lower().endswith(".pdf"):
+            try:
+                with open(file_path, "rb") as f:
+                    pdf_bytes = f.read()
+                # If PDF is under 20MB, pass directly to Gemini multimodal
+                if len(pdf_bytes) <= 20 * 1024 * 1024:
+                    b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
+                    parts.append({"inline_data": {"mime_type": "application/pdf", "data": b64_pdf}})
+                if pdf_text:
+                    parts.append({"text": f"Extracted Text Layer Preview:\n{pdf_text[:3000]}"})
+            except Exception as e:
+                logger.warning("Could not read PDF bytes for Gemini: %s", e)
+                if not pdf_text:
+                    return None
+                parts.append({"text": f"Document Filename: {original_filename}\nReport Text Content:\n{pdf_text}"})
         else:
             if not pdf_text:
                 return None
             parts.append({"text": f"Document Filename: {original_filename}\nReport Text Content:\n{pdf_text}"})
 
-        # Try models in fallback order with retry on transient 503 spikes
+        # Try models in fallback order with retry on transient 503 spikes or timeouts
         for model in FALLBACK_GEMINI_MODELS:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={Config.GEMINI_API_KEY}"
             payload = {
@@ -493,7 +507,7 @@ class ReportAnalysisService:
             import time
             for attempt in range(2):
                 try:
-                    res = requests.post(url, json=payload, timeout=20)
+                    res = requests.post(url, json=payload, timeout=35)
                     if res.status_code == 200:
                         data = res.json()
                         candidates = data.get("candidates", [])
@@ -508,18 +522,93 @@ class ReportAnalysisService:
                                     parsed = parsed[0]
                                 parsed["ai_provider"] = f"Google Gemini ({model})"
 
-                                # Clean parameters
+                                # Robustly normalize parameters
+                                raw_params = (
+                                    parsed.get("parameters")
+                                    or parsed.get("test_values")
+                                    or parsed.get("tests")
+                                    or parsed.get("results")
+                                    or []
+                                )
                                 clean_params = []
-                                for param in parsed.get("parameters", []):
+                                for param in raw_params:
                                     if isinstance(param, dict):
-                                        if param.get("measured_value") is not None:
+                                        # Accept flexible key naming: parameter, parameter_name, test_name, name
+                                        p_name = (
+                                            param.get("parameter_name")
+                                            or param.get("parameter")
+                                            or param.get("test_name")
+                                            or param.get("name")
+                                            or param.get("investigation")
+                                            or ""
+                                        ).strip()
+                                        if not p_name:
+                                            continue
+
+                                        # Measured text & value
+                                        raw_val = (
+                                            param.get("measured_text")
+                                            if param.get("measured_text") is not None
+                                            else (
+                                                param.get("value")
+                                                if param.get("value") is not None
+                                                else (
+                                                    param.get("result")
+                                                    if param.get("result") is not None
+                                                    else param.get("measured_value")
+                                                )
+                                            )
+                                        )
+                                        m_text = str(raw_val).strip() if raw_val is not None else ""
+
+                                        m_val = param.get("measured_value")
+                                        if m_val is None:
+                                            nums = re.findall(r"\b\d+(?:\.\d+)?\b", m_text)
+                                            if nums:
+                                                try:
+                                                    m_val = float(nums[-1])
+                                                except Exception:
+                                                    m_val = None
+                                        else:
                                             try:
-                                                param["measured_value"] = float(param["measured_value"])
+                                                m_val = float(m_val)
                                             except Exception:
-                                                param["measured_value"] = None
-                                        clean_params.append(param)
+                                                m_val = None
+
+                                        # Unit
+                                        u_text = str(param.get("unit") or param.get("units") or "").strip()
+
+                                        # Ref range
+                                        r_text = str(
+                                            param.get("ref_range_text")
+                                            or param.get("reference_range")
+                                            or param.get("normal_range")
+                                            or param.get("range")
+                                            or ""
+                                        ).strip()
+
+                                        # Flag
+                                        raw_fl = str(param.get("flag") or param.get("status") or param.get("interpretation") or "NORMAL").strip().upper()
+                                        if any(k in raw_fl for k in ("CRIT", "PANIC", "EMERG")):
+                                            fl = "CRITICAL"
+                                        elif any(k in raw_fl for k in ("HIGH", "ELEVAT", "POS", "1+", "2+", "3+", "ABNORM")):
+                                            fl = "HIGH"
+                                        elif any(k in raw_fl for k in ("LOW", "DECR")):
+                                            fl = "LOW"
+                                        else:
+                                            fl = "NORMAL"
+
+                                        clean_params.append({
+                                            "parameter_name": p_name,
+                                            "measured_value": m_val,
+                                            "measured_text": m_text or (str(m_val) if m_val is not None else "-"),
+                                            "unit": u_text,
+                                            "ref_range_min": param.get("ref_range_min"),
+                                            "ref_range_max": param.get("ref_range_max"),
+                                            "ref_range_text": r_text,
+                                            "flag": fl
+                                        })
                                     elif isinstance(param, str) and param.strip():
-                                        # Handle string parameter gracefully
                                         name = param.split(":")[0].strip() if ":" in param else param.strip()
                                         clean_params.append({
                                             "parameter_name": name,
@@ -530,6 +619,40 @@ class ReportAnalysisService:
                                             "flag": "HIGH" if any(w in param.lower() for w in ("high", "critical", "positive", "1+", "2+", "3+")) else "NORMAL"
                                         })
                                 parsed["parameters"] = clean_params
+
+                                # Flexible title
+                                parsed["detected_title"] = (
+                                    parsed.get("detected_title")
+                                    or parsed.get("title")
+                                    or parsed.get("test_type")
+                                    or parsed.get("test_name")
+                                    or ""
+                                ).strip()
+
+                                # Flexible summary
+                                summary_candidate = (
+                                    parsed.get("summary_plain_en")
+                                    or parsed.get("summary")
+                                    or parsed.get("explanation")
+                                    or parsed.get("ai_summary")
+                                    or ""
+                                ).strip()
+
+                                # If AI gave a very short summary, enrich it with parameter findings
+                                if len(summary_candidate) < 40 and clean_params:
+                                    abnormals = [p for p in clean_params if p["flag"] in ("HIGH", "LOW", "CRITICAL")]
+                                    if abnormals:
+                                        summary_candidate = (
+                                            f"Your report analysis shows {len(abnormals)} parameter(s) outside standard reference intervals: "
+                                            + ", ".join(f"{p['parameter_name']} ({p['measured_text']} {p['unit']})" for p in abnormals)
+                                            + ". All other tested values are within normal ranges. Please consult your physician for comprehensive clinical review."
+                                        )
+                                    else:
+                                        summary_candidate = (
+                                            f"Good news! All {len(clean_params)} laboratory parameters in this test are currently within standard reference ranges. "
+                                            "Continue regular health checkups and maintain a healthy lifestyle."
+                                        )
+                                parsed["summary_plain_en"] = summary_candidate
                                 return parsed
                     elif res.status_code == 503 and attempt == 0:
                         logger.info("Gemini model %s 503, pausing 1.2s before retry...", model)
@@ -538,6 +661,12 @@ class ReportAnalysisService:
                     else:
                         logger.warning("Gemini model %s returned status %s: %s", model, res.status_code, res.text[:200])
                         break
+                except requests.exceptions.Timeout:
+                    logger.warning("Gemini model %s attempt %d timed out (35s)", model, attempt)
+                    if attempt == 0:
+                        time.sleep(1.5)
+                        continue
+                    break
                 except Exception as e:
                     logger.warning("Gemini model %s attempt %d exception: %s", model, attempt, e)
                     break
