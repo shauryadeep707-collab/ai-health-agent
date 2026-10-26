@@ -82,27 +82,6 @@
           <p style="text-align:center; padding:2rem; color:var(--slate-400);">Loading verification status...</p>
         </div>
 
-        <!-- Verification Mechanism Explanation -->
-        <div class="panel">
-          <div class="panel-header">
-            <h3 class="panel-title">🛡️ DigiLocker Verification Architecture</h3>
-          </div>
-          <div style="font-size:0.925rem; line-height:1.6; color:var(--slate-700);">
-            <p style="margin-bottom:0.75rem;">
-              To ensure zero identity fraud, medical practitioners must authenticate their credentials using the official government <strong>DigiLocker / API Setu</strong> gateway.
-            </p>
-            <ol style="margin-left:1.5rem; margin-bottom:1rem;">
-              <li><strong>Secure Authorization:</strong> You are redirected to DigiLocker's authorized consent page with state-bound anti-CSRF protection.</li>
-              <li><strong>Direct Gateway Retrieval:</strong> Your active Medical Council Registration Certificate (DocType: <code>DOCREG</code>) is fetched directly from the issuer (NMC / State Council).</li>
-              <li><strong>Cryptographic & Identity Verification:</strong> The server validates issuer signatures, matches full names using phonetic similarity, and confirms active license status.</li>
-              <li><strong>Strict Status Handling:</strong> Results are assigned to <code>VERIFIED</code>, <code>REVIEW_REQUIRED</code>, or <code>REJECTED</code>. If a council is not yet digitized, manual review is available.</li>
-            </ol>
-            <div style="background-color:var(--slate-50); border:1px solid var(--slate-200); padding:1rem; border-radius:var(--radius-sm); font-size:0.85rem; color:var(--slate-600);">
-              💡 <strong>Developer / Sandbox Note:</strong> When evaluating without live government client keys, you can test the sandbox simulator workflow below to trigger and observe each state machine transition.
-            </div>
-          </div>
-        </div>
-
         <!-- Registered Credential Summary -->
         <div class="panel">
           <div class="panel-header">
