@@ -336,6 +336,17 @@ class ReportAnalysisService:
            and structured lab values directly from images or documents.
         2. Falls back seamlessly to offline deterministic rule-engine and regex parser.
         """
+        # Run Local Diagnostic Model First
+        try:
+            from backend.services.local_report_model import extract_local_report_details
+            local_info = extract_local_report_details(file_path)
+        except Exception:
+            local_info = {}
+
+        local_test_name = local_info.get("test_name") or ""
+        local_test_date = local_info.get("test_date") or ""
+        local_summary = local_info.get("summary") or ""
+
         is_image = any(img_ext in file_type.lower() for img_ext in ("jpg", "jpeg", "png", "webp", "image")) or \
                    Path(file_path).suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")
 
@@ -367,11 +378,11 @@ class ReportAnalysisService:
                 inferred_title = cls.infer_title_from_parameters(ai_params) or cls.extract_report_title(ai_data.get("extracted_text") or extracted_text)
 
                 if cls.is_generic_title(user_test_type):
-                    detected_title = (ai_title if not cls.is_generic_title(ai_title) else "") or inferred_title or ai_title or "Diagnostic Lab Report"
+                    detected_title = local_test_name or (ai_title if not cls.is_generic_title(ai_title) else "") or inferred_title or "Diagnostic Lab Report"
                 else:
-                    detected_title = user_test_type or (ai_title if not cls.is_generic_title(ai_title) else "") or inferred_title or "Diagnostic Lab Report"
+                    detected_title = user_test_type or local_test_name or (ai_title if not cls.is_generic_title(ai_title) else "") or inferred_title or "Diagnostic Lab Report"
 
-                detected_date = user_report_date or ai_data.get("test_date") or cls.extract_report_date(extracted_text)
+                detected_date = user_report_date or local_test_date or ai_data.get("test_date") or cls.extract_report_date(extracted_text)
                 return {
                     "detected_title": detected_title,
                     "lab_name": ai_data.get("lab_name", ""),
@@ -380,7 +391,7 @@ class ReportAnalysisService:
                     "parameters": ai_params,
                     "ai_analysis": {
                         "ai_provider": ai_data.get("ai_provider", "Google Gemini"),
-                        "summary_plain_en": ai_data.get("summary_plain_en", ""),
+                        "summary_plain_en": local_summary or ai_data.get("summary_plain_en", ""),
                         "clinical_notes": ai_data.get("clinical_notes", ""),
                         "abnormal_count": ai_data.get("abnormal_count", 0),
                         "urgent_flags": ai_data.get("urgent_flags", "No critical alerts identified."),
@@ -393,14 +404,17 @@ class ReportAnalysisService:
         # STEP 2: Rule-Based Fallback Engine (Offline / Local)
         # -------------------------------------------------------------
         test_values = cls.parse_lab_parameters(extracted_text)
-        inferred_fallback = cls.infer_title_from_parameters(test_values) or cls.extract_report_title(extracted_text)
+        inferred_fallback = local_test_name or cls.infer_title_from_parameters(test_values) or cls.extract_report_title(extracted_text)
         if cls.is_generic_title(user_test_type):
             detected_title = inferred_fallback or "Diagnostic Lab Report"
         else:
             detected_title = user_test_type or inferred_fallback or "Diagnostic Lab Report"
 
-        detected_date = user_report_date or cls.extract_report_date(extracted_text) or None
+        detected_date = user_report_date or local_test_date or cls.extract_report_date(extracted_text) or None
         explanation = cls.generate_ai_explanation(test_values, original_filename)
+        if local_summary:
+            explanation["summary_plain_en"] = local_summary
+            explanation["ai_provider"] = "Local Clinical AI Model"
 
         return {
             "detected_title": detected_title,

@@ -290,19 +290,6 @@
         <!-- Dynamic Container for Active Upload Result -->
         <div id="analysis-result-container"></div>
 
-        <!-- Historical Reports & Parameter Trend Tool -->
-        <div class="panel">
-          <div class="panel-header">
-            <h3 class="panel-title">📈 Parameter Trend Over Time</h3>
-          </div>
-          <div style="display:flex; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap;">
-            <input type="text" id="compare-param-input" class="form-control" placeholder="Enter parameter (e.g. Total Cholesterol, HbA1c, Hemoglobin)" style="max-width:380px;">
-            <button onclick="ReportUpload.compareParameter()" class="btn btn-secondary">
-              Compare Over Time
-            </button>
-          </div>
-          <div id="comparison-results"></div>
-        </div>
 
         <!-- Dedicated Section for Provided Reports Arranged by Test Date -->
         <div class="panel" id="provided-reports-section">

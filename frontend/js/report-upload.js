@@ -102,117 +102,82 @@ const ReportUpload = {
     const container = document.getElementById("analysis-result-container");
     if (!container) return;
 
-    const values = data.test_values || [];
     const analysis = data.ai_analysis || {};
     const reportTitle = data.test_type || "Diagnostic Investigation";
-    const reportDate = data.report_date ? data.report_date.split('T')[0] : "";
-    const rawText = data.ocr_raw_text || data.extracted_text || "";
-
-    const hasValues = values.length > 0;
-
-    let tableRows = values.map(v => {
-      let badgeClass = "badge-verified";
-      if (v.flag === "HIGH") badgeClass = "badge-rejected";
-      if (v.flag === "LOW") badgeClass = "badge-pending";
-      if (v.flag === "CRITICAL") badgeClass = "badge-rejected";
-
-      const valDisplay = v.measured_text || (v.measured_value !== null ? v.measured_value : "-");
-
-      return `
-        <tr>
-          <td><strong>${v.parameter_name}</strong></td>
-          <td><strong>${valDisplay}</strong> ${v.unit || ''}</td>
-          <td>${v.ref_range_text || '-'}</td>
-          <td><span class="badge ${badgeClass}">${v.flag || 'NORMAL'}</span></td>
-        </tr>
-      `;
-    }).join("");
+    const reportDate = data.report_date ? data.report_date.split('T')[0] : "Not Specified";
+    const summaryText = analysis.summary_plain_en || "Medical report processed successfully.";
 
     container.innerHTML = `
-      <div class="panel" style="border-top: 4px solid var(--primary); box-shadow:0 4px 14px rgba(0,0,0,0.06);">
+      <div class="panel" style="border-top: 4px solid var(--primary); box-shadow:0 4px 18px rgba(0,0,0,0.08); margin-top:1.5rem;">
         <div class="panel-header" style="flex-wrap:wrap; gap:1rem; align-items:flex-start;">
           <div>
             <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.35rem;">
               <span class="badge" style="background:#e0f2fe; color:#0284c7; font-weight:700; font-size:0.85rem; border:1px solid #bae6fd;">
-                🏷️ Pathology Test
+                🔬 ${reportTitle}
               </span>
-              ${reportDate ? `
+              ${reportDate && reportDate !== 'Not Specified' ? `
                 <span class="badge" style="background:#f1f5f9; color:#475569; font-weight:600; font-size:0.8rem;">
                   🗓️ Test Date: ${reportDate}
                 </span>
               ` : ''}
-              <span class="badge" style="background:#f8fafc; color:#64748b; font-size:0.8rem; border:1px solid #e2e8f0;">
-                🤖 ${analysis.ai_provider || 'Clinical Engine'}
+              <span class="badge" style="background:#f0fdf4; color:#16a34a; font-weight:700; font-size:0.8rem; border:1px solid #bbf7d0;">
+                ✓ AI Analyzed
               </span>
             </div>
-            <h3 class="panel-title" style="font-size:1.35rem; font-weight:800; color:var(--dark); margin:0.25rem 0 0.35rem;">
-              🔬 ${reportTitle}
+            <h3 class="panel-title" style="font-size:1.35rem; font-weight:800; color:var(--dark); margin:0.35rem 0;">
+              ${reportTitle}
             </h3>
-            <div style="font-size:0.85rem; color:var(--slate-500); display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-              <span>📄 <em>Source Document:</em> ${data.original_filename}</span>
-              ${reportTitle && reportTitle.toLowerCase() !== (data.original_filename || '').toLowerCase() ? `
-                <span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700; font-size:0.75rem; border:1px solid #bae6fd;">
-                  ✨ AI Smart Title: ${reportTitle}
-                </span>
-              ` : ''}
+            <div style="font-size:0.85rem; color:var(--slate-500);">
+              📄 <em>Uploaded File:</em> ${data.original_filename}
             </div>
           </div>
-          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <div>
             ${data.report_id ? `
-              <button onclick="ReportUpload.openOriginalFile('${data.report_id}')" class="btn btn-outline btn-sm" style="display:inline-flex; align-items:center; gap:0.35rem;">
-                👁️ View Original Report Image
-              </button>
-            ` : ''}
-            ${hasValues && data.report_id ? `
-              <button onclick="ReportUpload.confirmReport('${data.report_id}')" id="confirm-btn-${data.report_id}" class="btn btn-secondary btn-sm">
-                ✅ Confirm Findings
+              <button onclick="ReportUpload.openOriginalFile('${data.report_id}')" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:0.4rem; padding:0.6rem 1.2rem; font-weight:700;">
+                👁️ View Uploaded Report
               </button>
             ` : ''}
           </div>
         </div>
 
-        ${hasValues ? `
-        <div class="table-responsive" style="margin-bottom:1.5rem;">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Parameter Name</th>
-                <th>Measured Value</th>
-                <th>Standard Reference Interval</th>
-                <th>Status Flag</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${tableRows}
-            </tbody>
-          </table>
-        </div>
-        ` : `
-        <div class="alert alert-warning" style="margin-bottom:1.5rem;">
-          ⚠️ <strong>Non-Diagnostic or Unreadable Document:</strong> No clinical laboratory values were detected in this image. Please upload a clear digital PDF or sharp photo of a genuine pathology test report.
-        </div>
-        `}
-
-        <div style="background-color:var(--slate-100); border-radius:var(--radius-md); padding:1.25rem; margin-bottom:1.25rem;">
-          <h4 style="font-size:1.05rem; font-weight:700; color:var(--dark); margin-bottom:0.5rem;">
-            🤖 AI Plain English Explanation (What This Report Tells You)
+        <!-- 3 Extracted Auto-Fill Fields Display Card -->
+        <div style="background:#ffffff; border:1px solid var(--slate-200); border-radius:10px; padding:1.25rem; margin-top:1rem;">
+          <h4 style="font-size:1.05rem; font-weight:800; color:var(--dark); margin-bottom:1rem; display:flex; align-items:center; gap:0.4rem;">
+            📋 Extracted Report Details
           </h4>
-          <p style="white-space:pre-line; line-height:1.6; font-size:0.95rem; color:var(--slate-700);">
-            ${analysis.summary_plain_en}
-          </p>
+          
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1rem; margin-bottom:1.25rem;">
+            <div style="background:#f8fafc; padding:0.85rem 1rem; border-radius:8px; border:1px solid #e2e8f0;">
+              <span style="font-size:0.78rem; text-transform:uppercase; font-weight:700; color:var(--slate-500); display:block; margin-bottom:0.25rem;">
+                1. Report Konsi Wali Hai (Test Name)
+              </span>
+              <strong style="color:var(--dark); font-size:1.05rem;">${reportTitle}</strong>
+            </div>
+
+            <div style="background:#f8fafc; padding:0.85rem 1rem; border-radius:8px; border:1px solid #e2e8f0;">
+              <span style="font-size:0.78rem; text-transform:uppercase; font-weight:700; color:var(--slate-500); display:block; margin-bottom:0.25rem;">
+                2. Date of Test (Test Date)
+              </span>
+              <strong style="color:var(--dark); font-size:1.05rem;">${reportDate}</strong>
+            </div>
+          </div>
+
+          <div style="background:#eff6ff; padding:1.1rem; border-radius:8px; border:1px solid #bfdbfe;">
+            <span style="font-size:0.8rem; text-transform:uppercase; font-weight:800; color:#1e40af; display:block; margin-bottom:0.35rem;">
+              3. Summary (Clinical Findings & Condition)
+            </span>
+            <p style="margin:0; font-size:0.95rem; line-height:1.6; color:#1e3a8a; font-weight:500;">
+              ${summaryText}
+            </p>
+          </div>
         </div>
 
-        ${analysis.urgent_flags ? `
-          <div class="alert alert-warning" style="margin-bottom:1rem;">
-            ⚠️ <strong>Clinical Note:</strong> ${analysis.urgent_flags}
-          </div>
-        ` : ''}
-
-        <div class="disclaimer-card">
-          <div class="disclaimer-title">⚖️ Medical Safety Notice</div>
-          <div class="disclaimer-text">
-            Abnormal test values do NOT automatically establish a diagnosis. Laboratory metrics must always be evaluated in the clinical context of your physical condition, symptoms, and medical history by a licensed healthcare professional.
-          </div>
+        <div style="margin-top:1.25rem; text-align:right;">
+          ${data.report_id ? `
+            <button onclick="ReportUpload.openOriginalFile('${data.report_id}')" class="btn btn-outline" style="display:inline-flex; align-items:center; gap:0.35rem;">
+              🔍 Open Full Document Viewer
+            </button>
+          ` : ''}
         </div>
       </div>
     `;
