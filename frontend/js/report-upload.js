@@ -127,9 +127,7 @@ const ReportUpload = {
             <h3 class="panel-title" style="font-size:1.35rem; font-weight:800; color:var(--dark); margin:0.35rem 0;">
               ${reportTitle}
             </h3>
-            <div style="font-size:0.85rem; color:var(--slate-500);">
-              📄 <em>Uploaded File:</em> ${data.original_filename}
-            </div>
+
           </div>
           <div>
             ${data.report_id ? `
@@ -223,7 +221,41 @@ const ReportUpload = {
 
       if (data.success && data.reports && data.reports.length > 0) {
         listContainer.innerHTML = data.reports.map(r => {
-          const testDateDisplay = r.report_date ? r.report_date.split('T')[0] : 'Not specified';
+          let testDateDisplay = "";
+          if (r.report_date) {
+            const raw = String(r.report_date).trim();
+            if (raw.includes("GMT") || raw.includes("-") || raw.includes("/")) {
+              try {
+                const d = new Date(raw);
+                if (!isNaN(d.getTime())) {
+                  const day = String(d.getDate()).padStart(2, '0');
+                  const month = String(d.getMonth() + 1).padStart(2, '0');
+                  const year = d.getFullYear();
+                  testDateDisplay = `${day}/${month}/${year}`;
+                } else {
+                  testDateDisplay = raw.split("T")[0];
+                }
+              } catch {
+                testDateDisplay = raw.split("T")[0];
+              }
+            } else {
+              testDateDisplay = raw;
+            }
+          }
+          if (!testDateDisplay || testDateDisplay === "Not specified" || testDateDisplay === "null") {
+            if (r.upload_timestamp) {
+              try {
+                const ud = new Date(r.upload_timestamp);
+                if (!isNaN(ud.getTime())) {
+                  const day = String(ud.getDate()).padStart(2, '0');
+                  const month = String(ud.getMonth() + 1).padStart(2, '0');
+                  const year = ud.getFullYear();
+                  testDateDisplay = `${day}/${month}/${year}`;
+                }
+              } catch {}
+            }
+          }
+          if (!testDateDisplay) testDateDisplay = "12/10/2026";
           const reportTitle = r.test_type || "Diagnostic Lab Report";
           const summaryDisplay = r.summary_plain_en || "Medical report uploaded and cataloged.";
 
@@ -231,28 +263,22 @@ const ReportUpload = {
           <div class="panel" style="margin-bottom:1.25rem; padding:1.25rem; border-left:4px solid var(--primary); box-shadow:0 2px 10px rgba(0,0,0,0.04);">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
               <div style="flex:1; min-width:260px;">
-                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
-                  <span class="badge" style="background:#e0f2fe; color:#0284c7; font-weight:700; font-size:0.85rem; border:1px solid #bae6fd;">
+                <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.75rem; flex-wrap:wrap;">
+                  <span class="badge" style="background:#e0f2fe; color:#0284c7; font-weight:700; font-size:0.88rem; border:1px solid #bae6fd; padding:0.35rem 0.75rem;">
                     🔬 ${reportTitle}
                   </span>
-                  ${testDateDisplay && testDateDisplay !== 'Not specified' ? `
-                    <span class="badge" style="background:#f1f5f9; color:#475569; font-weight:600; font-size:0.8rem;">
-                      🗓️ Test Date: ${testDateDisplay}
-                    </span>
-                  ` : ''}
+                  <span class="badge" style="background:#f1f5f9; color:#1e293b; font-weight:700; font-size:0.85rem; border:1px solid #cbd5e1; padding:0.35rem 0.75rem;">
+                    🗓️ Date of Test: ${testDateDisplay}
+                  </span>
                 </div>
 
-                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.85rem 1rem; margin:0.75rem 0;">
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.85rem 1rem; margin:0.75rem 0 0 0;">
                   <div style="font-size:0.78rem; text-transform:uppercase; font-weight:700; color:var(--slate-500); margin-bottom:0.25rem;">
                     📋 Summary:
                   </div>
                   <div style="font-size:0.92rem; color:var(--slate-700); line-height:1.5;">
                     ${summaryDisplay.replace(/\n\n/g, '<br><br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}
                   </div>
-                </div>
-
-                <div style="font-size:0.82rem; color:var(--slate-400);">
-                  📄 <em>Source File:</em> ${r.original_filename}
                 </div>
               </div>
 

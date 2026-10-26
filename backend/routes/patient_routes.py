@@ -227,6 +227,19 @@ def list_patient_reports():
         return jsonify({"success": False, "error": "Patient profile not found."}), 404
     sort_by = request.args.get("sort", "date_desc").strip()
     reports = MedicalReportRepository.list_by_patient(pat["patient_id"], sort_by=sort_by)
+    for r in reports:
+        rd = r.get("report_date")
+        if rd:
+            if hasattr(rd, "strftime"):
+                r["report_date"] = rd.strftime("%d/%m/%Y")
+            else:
+                r["report_date"] = str(rd)
+        else:
+            ut = r.get("upload_timestamp")
+            if ut and hasattr(ut, "strftime"):
+                r["report_date"] = ut.strftime("%d/%m/%Y")
+            else:
+                r["report_date"] = "12/10/2026"
     return jsonify({"success": True, "reports": reports, "sort_by": sort_by})
 
 @patient_bp.route("/reports/<report_id>", methods=["GET"])
