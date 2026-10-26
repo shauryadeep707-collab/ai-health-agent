@@ -67,6 +67,6 @@ htmlcov/
 *.pdf
 generate_complete_project_pdf.py
 
-# Local isolated model training (Do NOT push to git)
-model train/
-"model train"/
+# Ignore training dataset folder (huge size: 8,000+ synthetic images)
+model train/dataset/
+"model train/dataset"/
