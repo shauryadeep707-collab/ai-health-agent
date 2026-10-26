@@ -66,3 +66,7 @@ htmlcov/
 # Local viva documentation & reports
 *.pdf
 generate_complete_project_pdf.py
+
+# Local isolated model training (Do NOT push to git)
+model train/
+"model train"/
