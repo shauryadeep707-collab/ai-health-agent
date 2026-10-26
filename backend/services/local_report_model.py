@@ -158,9 +158,9 @@ def extract_local_report_details(file_path: str) -> dict:
     2. test_date: Extracted test/sample date
     3. summary: Concise clinical summary & diagnosis
     """
-    test_name = "General Diagnostic Lab Report"
+    test_name = ""
     test_date = ""
-    summary = "Medical investigation complete. Standard parameters verified."
+    summary = ""
     cnn_cat = "unknown"
     cnn_conf = 99.4
 
@@ -187,9 +187,9 @@ def extract_local_report_details(file_path: str) -> dict:
 
     if not full_text:
         return {
-            "test_name": test_name,
-            "test_date": test_date,
-            "summary": summary,
+            "test_name": "",
+            "test_date": "",
+            "summary": "",
             "cnn_category": cnn_cat,
             "cnn_confidence": cnn_conf
         }

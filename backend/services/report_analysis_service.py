@@ -378,11 +378,11 @@ class ReportAnalysisService:
                 inferred_title = cls.infer_title_from_parameters(ai_params) or cls.extract_report_title(ai_data.get("extracted_text") or extracted_text)
 
                 if cls.is_generic_title(user_test_type):
-                    detected_title = local_test_name or (ai_title if not cls.is_generic_title(ai_title) else "") or inferred_title or "Diagnostic Lab Report"
+                    detected_title = (ai_title if not cls.is_generic_title(ai_title) else "") or local_test_name or inferred_title or "Diagnostic Lab Report"
                 else:
-                    detected_title = user_test_type or local_test_name or (ai_title if not cls.is_generic_title(ai_title) else "") or inferred_title or "Diagnostic Lab Report"
+                    detected_title = user_test_type or (ai_title if not cls.is_generic_title(ai_title) else "") or local_test_name or inferred_title or "Diagnostic Lab Report"
 
-                detected_date = user_report_date or local_test_date or ai_data.get("test_date") or cls.extract_report_date(extracted_text)
+                detected_date = user_report_date or ai_data.get("test_date") or local_test_date or cls.extract_report_date(extracted_text)
                 return {
                     "detected_title": detected_title,
                     "lab_name": ai_data.get("lab_name", ""),
@@ -391,7 +391,7 @@ class ReportAnalysisService:
                     "parameters": ai_params,
                     "ai_analysis": {
                         "ai_provider": ai_data.get("ai_provider", "Google Gemini"),
-                        "summary_plain_en": local_summary or ai_data.get("summary_plain_en", ""),
+                        "summary_plain_en": ai_data.get("summary_plain_en") or local_summary or "Clinical investigation complete.",
                         "clinical_notes": ai_data.get("clinical_notes", ""),
                         "abnormal_count": ai_data.get("abnormal_count", 0),
                         "urgent_flags": ai_data.get("urgent_flags", "No critical alerts identified."),
@@ -458,7 +458,7 @@ class ReportAnalysisService:
             '      "flag": "NORMAL or HIGH or LOW or CRITICAL"\n'
             '    }\n'
             '  ],\n'
-            '  "summary_plain_en": "A clear, empathetic, and thorough explanation in plain language. Must include: (1) What test was performed and its purpose, (2) Highlights of key normal parameters and any out-of-range/elevated parameters with their values, (3) A clear, reassuring explanation of what the abnormal findings typically suggest, (4) Reassurance that single lab results fluctuate and require physician review, and (5) Practical wellness guidance.",\n'
+            '  "summary_plain_en": "A clear, concise, and direct clinical diagnosis and summary of findings. If urine routine indicates high pus cells, nitrite, or bacteria, clearly diagnose Urinary Tract Infection (UTI) with critical pyuria and actionable guidance.",\n'
             '  "clinical_notes": "Concise summary for clinical review highlighting significant pathology markers",\n'
             '  "risk_level": "LOW or MODERATE or HIGH",\n'
             '  "abnormal_count": 0,\n'
