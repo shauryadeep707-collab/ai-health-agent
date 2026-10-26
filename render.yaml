@@ -10,13 +10,11 @@ services:
       - key: FLASK_ENV
         value: production
       - key: DB_TYPE
-        value: sqlite
-      - key: SQLITE_DB_PATH
-        value: database/ai_health.db
+        value: supabase
       - key: SECRET_KEY
-        generateValue: true
+        value: prod-secure-secret-key-32-chars-minimum-health-agent-2026
       - key: JWT_SECRET_KEY
-        generateValue: true
+        value: prod-jwt-secret-key-health-agent-token-2026
       - key: AI_PROVIDER
         value: gemini
       - key: GEMINI_MODEL
