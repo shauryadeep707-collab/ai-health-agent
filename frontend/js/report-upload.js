@@ -224,50 +224,42 @@ const ReportUpload = {
       if (data.success && data.reports && data.reports.length > 0) {
         listContainer.innerHTML = data.reports.map(r => {
           const testDateDisplay = r.report_date ? r.report_date.split('T')[0] : 'Not specified';
-          const uploadDateDisplay = r.upload_timestamp ? (r.upload_timestamp.split('T')[0] || r.upload_timestamp) : '';
-          const riskClass = r.risk_level === 'LOW' ? 'badge-verified' : (r.risk_level === 'MODERATE' ? 'badge-pending' : 'badge-rejected');
-          const abnormalText = r.abnormal_count > 0 ? `<span style="color:#dc2626; font-weight:600;">⚠️ ${r.abnormal_count} abnormal</span>` : `<span style="color:#16a34a; font-weight:600;">✓ All normal</span>`;
-          const paramCount = r.test_count ? `${r.test_count} parameters` : '';
-          const reportTitle = r.test_type || "Diagnostic Investigation";
+          const reportTitle = r.test_type || "Diagnostic Lab Report";
+          const summaryDisplay = r.summary_plain_en || "Medical report uploaded and cataloged.";
 
           return `
-          <div class="panel" style="margin-bottom:1rem; padding:1.25rem; border-left:4px solid ${r.risk_level === 'LOW' ? 'var(--success)' : (r.risk_level === 'MODERATE' ? '#f59e0b' : '#ef4444')};">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.75rem;">
+          <div class="panel" style="margin-bottom:1.25rem; padding:1.25rem; border-left:4px solid var(--primary); box-shadow:0 2px 10px rgba(0,0,0,0.04);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
               <div style="flex:1; min-width:260px;">
-                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
                   <span class="badge" style="background:#e0f2fe; color:#0284c7; font-weight:700; font-size:0.85rem; border:1px solid #bae6fd;">
-                    🗓️ Test Date: ${testDateDisplay}
+                    🔬 ${reportTitle}
                   </span>
-                  <span class="badge ${riskClass}">
-                    ${r.risk_level || 'ANALYZED'}
-                  </span>
-                  <span style="font-size:0.8rem; color:var(--slate-500);">
-                    ${abnormalText} ${paramCount ? '• ' + paramCount : ''}
-                  </span>
+                  ${testDateDisplay && testDateDisplay !== 'Not specified' ? `
+                    <span class="badge" style="background:#f1f5f9; color:#475569; font-weight:600; font-size:0.8rem;">
+                      🗓️ Test Date: ${testDateDisplay}
+                    </span>
+                  ` : ''}
                 </div>
-                <h4 style="font-size:1.15rem; font-weight:800; color:var(--dark); margin:0.3rem 0;">
-                  🏷️ ${reportTitle}
-                </h4>
-                <div style="font-size:0.85rem; color:var(--slate-600); margin-bottom:0.4rem;">
-                  📄 <em>Source File:</em> ${r.original_filename} | ⏱️ <em>Uploaded:</em> ${uploadDateDisplay}
-                </div>
-                ${r.summary_plain_en ? `
-                  <div style="font-size:0.88rem; color:var(--slate-700); margin-top:0.4rem; line-height:1.5; background:#f8fafc; padding:0.65rem 0.85rem; border-radius:6px; border:1px solid #e2e8f0;">
-                    💡 <strong>Summary:</strong> ${r.summary_plain_en.replace(/\n\n/g, '<br><br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}
-                  </div>
-                ` : ''}
-              </div>
-              <div style="display:flex; flex-direction:column; gap:0.4rem; min-width:160px;">
-                <button onclick="ReportUpload.openOriginalFile('${r.report_id}')" class="btn btn-outline btn-sm" style="display:inline-flex; align-items:center; justify-content:center; gap:0.3rem;">
-                  👁️ View File
-                </button>
-                <button onclick="ReportUpload.viewReportDetail('${r.report_id}')" class="btn btn-primary btn-sm">
-                  📊 View Analysis
-                </button>
-                <button onclick="ReportUpload.discussWithAI('${reportTitle.replace(/'/g, "\\'")}', '${testDateDisplay}')" class="btn btn-outline btn-sm">
-                  💬 Ask AI
-                </button>
 
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.85rem 1rem; margin:0.75rem 0;">
+                  <div style="font-size:0.78rem; text-transform:uppercase; font-weight:700; color:var(--slate-500); margin-bottom:0.25rem;">
+                    📋 Summary:
+                  </div>
+                  <div style="font-size:0.92rem; color:var(--slate-700); line-height:1.5;">
+                    ${summaryDisplay.replace(/\n\n/g, '<br><br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}
+                  </div>
+                </div>
+
+                <div style="font-size:0.82rem; color:var(--slate-400);">
+                  📄 <em>Source File:</em> ${r.original_filename}
+                </div>
+              </div>
+
+              <div>
+                <button onclick="ReportUpload.openOriginalFile('${r.report_id}')" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:0.4rem; padding:0.55rem 1.1rem; font-weight:700;">
+                  👁️ View Uploaded Report
+                </button>
               </div>
             </div>
           </div>
