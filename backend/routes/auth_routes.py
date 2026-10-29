@@ -21,7 +21,8 @@ def register_patient():
     password = data.get("password", "")
     full_name = sanitize_input(data.get("full_name", ""))
     phone = data.get("phone", "")
-    dob = data.get("dob", None)
+    raw_dob = data.get("dob", None)
+    dob = str(raw_dob).strip().split("T")[0] if raw_dob else None
     gender = data.get("gender", "PREFER_NOT_TO_SAY")
     blood_group = data.get("blood_group", None)
     consent_health = data.get("consent_health", False)
@@ -265,9 +266,13 @@ def get_current_user_info():
     elif user["role"] == "PATIENT":
         pat = PatientProfileRepository.find_by_user_id(user["user_id"])
         if pat:
+            dob_val = pat.get("date_of_birth")
+            dob_str = ""
+            if dob_val:
+                dob_str = dob_val.strftime("%Y-%m-%d") if hasattr(dob_val, "strftime") else str(dob_val).split("T")[0]
             profile_info = {
                 "patient_id": pat["patient_id"],
-                "date_of_birth": pat["date_of_birth"],
+                "date_of_birth": dob_str,
                 "gender": pat["gender"],
                 "blood_group": pat["blood_group"],
                 "allergies": pat["allergies"],

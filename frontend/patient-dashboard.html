@@ -909,7 +909,24 @@
           document.getElementById("prof-fullname").value = u.full_name || "";
           document.getElementById("prof-email").value = u.email || "";
           document.getElementById("prof-phone").value = u.phone_number || "";
-          document.getElementById("prof-dob").value = u.date_of_birth || "";
+          let dobValue = "";
+          if (u.date_of_birth) {
+            const raw = String(u.date_of_birth).trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+              dobValue = raw;
+            } else {
+              try {
+                const parsedDate = new Date(raw);
+                if (!isNaN(parsedDate.getTime())) {
+                  const yyyy = parsedDate.getFullYear();
+                  const mm = String(parsedDate.getMonth() + 1).padStart(2, '0');
+                  const dd = String(parsedDate.getDate()).padStart(2, '0');
+                  dobValue = `${yyyy}-${mm}-${dd}`;
+                }
+              } catch (err) {}
+            }
+          }
+          document.getElementById("prof-dob").value = dobValue;
           document.getElementById("prof-gender").value = u.gender || "PREFER_NOT_TO_SAY";
           document.getElementById("prof-blood").value = u.blood_group || "";
           document.getElementById("prof-emergency").value = u.emergency_contact || "";

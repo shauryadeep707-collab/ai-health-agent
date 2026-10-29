@@ -22,6 +22,9 @@ def get_patient_profile():
     pat = PatientProfileRepository.find_by_user_id(user["user_id"])
     if not pat:
         return jsonify({"success": False, "error": "Patient profile not found."}), 404
+    if pat.get("date_of_birth"):
+        dob_val = pat["date_of_birth"]
+        pat["date_of_birth"] = dob_val.strftime("%Y-%m-%d") if hasattr(dob_val, "strftime") else str(dob_val).split("T")[0]
     return jsonify({"success": True, "patient": pat})
 
 @patient_bp.route("/profile", methods=["PUT"])
@@ -34,7 +37,13 @@ def update_patient_profile():
         return jsonify({"success": False, "error": "Patient profile not found."}), 404
 
     data = request.get_json() or {}
-    dob = data.get("date_of_birth", pat.get("date_of_birth"))
+    raw_dob = data.get("date_of_birth")
+    if raw_dob and str(raw_dob).strip():
+        dob = str(raw_dob).strip().split("T")[0]
+    else:
+        dob = pat.get("date_of_birth")
+        if hasattr(dob, "strftime"):
+            dob = dob.strftime("%Y-%m-%d")
     gender = data.get("gender", pat.get("gender"))
     blood_group = data.get("blood_group", pat.get("blood_group"))
     emergency_contact = sanitize_input(data.get("emergency_contact", pat.get("emergency_contact") or ""))
