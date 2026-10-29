@@ -4,6 +4,22 @@ from backend.database.repositories import MedicineRepository
 
 medicine_bp = Blueprint("medicine", __name__, url_prefix="/api/medicines")
 
+@medicine_bp.route("/suggest", methods=["GET"])
+def suggest_medicines():
+    """
+    O(L) Prefix Autosuggestion endpoint powered by Trie Data Structure
+    and Queue-based BFS level-order ranking.
+    """
+    prefix = request.args.get("q", "").strip() or request.args.get("prefix", "").strip()
+    limit = int(request.args.get("limit", 6))
+    suggestions = MedicineService.get_suggestions(prefix, limit)
+    return jsonify({
+        "success": True,
+        "prefix": prefix,
+        "suggestions": suggestions,
+        "dsa": "Trie (Prefix Tree) with Queue-based BFS traversal"
+    })
+
 @medicine_bp.route("/search", methods=["GET"])
 def search_medicines():
     query = request.args.get("query", "").strip() or request.args.get("q", "").strip()

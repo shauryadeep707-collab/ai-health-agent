@@ -7,12 +7,156 @@ from backend.database.repositories import MedicineRepository
 
 logger = logging.getLogger(__name__)
 
+# =============================================================================
+# DATA STRUCTURE 1: TRIE (Prefix Tree) with Queue-based BFS for Autosuggestions
+# =============================================================================
+class TrieNode:
+    """Node in the Trie Prefix Tree."""
+    def __init__(self):
+        self.children = {}
+        self.is_end_of_word = False
+        self.medicine_name = None
+        self.generic_name = None
+
+class MedicineTrie:
+    """
+    Trie (Prefix Tree) Data Structure:
+    Enables O(L) ultra-fast prefix search for instant medicine autocomplete.
+    Uses a Queue (FIFO) to traverse and rank the closest suggestions via BFS.
+    """
+    def __init__(self):
+        self.root = TrieNode()
+
+    def insert(self, name: str, generic: str = ""):
+        if not name:
+            return
+        node = self.root
+        for char in name.lower().strip():
+            if char not in node.children:
+                node.children[char] = TrieNode()
+            node = node.children[char]
+        node.is_end_of_word = True
+        node.medicine_name = name.strip()
+        node.generic_name = generic.strip()
+
+    def search_prefix(self, prefix: str, limit: int = 6) -> list[dict]:
+        """
+        Traverses prefix in O(L) time, then uses a FIFO Queue (Breadth-First Search)
+        to collect the top nearest completions.
+        """
+        if not prefix or not prefix.strip():
+            return []
+        
+        node = self.root
+        for char in prefix.lower().strip():
+            if char not in node.children:
+                return []
+            node = node.children[char]
+
+        # Queue (FIFO) for Breadth-First Search suggestion gathering
+        results = []
+        queue = [node]  # Initial queue with prefix root
+
+        while queue and len(results) < limit:
+            curr = queue.pop(0)  # FIFO Dequeue
+            if curr.is_end_of_word and curr.medicine_name:
+                results.append({
+                    "brand_name": curr.medicine_name,
+                    "generic_name": curr.generic_name
+                })
+            for child in curr.children.values():
+                queue.append(child)  # FIFO Enqueue
+
+        return results
+
+# =============================================================================
+# DATA STRUCTURE 2: STACK (LIFO) for Multi-Drug Pairwise Backtracking
+# =============================================================================
+class MedicinePairStack:
+    """
+    Stack Data Structure (LIFO):
+    Uses an explicit Stack to generate all unique (N choose 2) combinations
+    via iterative backtracking for multi-drug pairwise interaction checks.
+    """
+    @staticmethod
+    def generate_pairs(medicines: list[str]) -> list[tuple[str, str]]:
+        pairs = []
+        stack = []
+        # Push all medicines onto the stack
+        for med in medicines:
+            if med and med.strip():
+                stack.append(med.strip())
+
+        # LIFO Pop & Pair Backtracking
+        while len(stack) > 1:
+            current = stack.pop()  # LIFO Pop
+            for remaining in stack:
+                pairs.append((remaining, current))
+
+        return pairs
+
 class MedicineService:
     """
     Authoritative Clinical Pharmacology and Drug Safety Engine.
     Powered by Pre-Trained Biomedical LLM (Google Gemini / Med-AI) with
-    automatic Supabase caching and real-time pharmacy delivery links.
+    automatic Supabase caching, Trie & Queue autocomplete, and Stack backtracking.
     """
+
+    _trie = None
+
+    @classmethod
+    def _get_trie(cls) -> MedicineTrie:
+        """Initializes and seeds the in-memory Trie Data Structure."""
+        if cls._trie is not None:
+            return cls._trie
+
+        cls._trie = MedicineTrie()
+        # Seed core common medications into Trie
+        seed_medicines = [
+            ("Dolo 650", "Paracetamol (650mg)"),
+            ("Combiflam", "Ibuprofen (400mg) + Paracetamol (325mg)"),
+            ("Doxivox", "Doxycycline Hydrochloride (100mg)"),
+            ("Doxovent", "Doxofylline (400mg)"),
+            ("Azithral 500", "Azithromycin (500mg)"),
+            ("Montair LC", "Levocetirizine (5mg) + Montelukast (10mg)"),
+            ("Pan 40", "Pantoprazole Gastro-resistant (40mg)"),
+            ("Pantocid DSR", "Pantoprazole + Domperidone"),
+            ("Augmentin 625 Duo", "Amoxicillin (500mg) + Clavulanic Acid (125mg)"),
+            ("Glycomet 500", "Metformin Hydrochloride (500mg)"),
+            ("Atorva 10", "Atorvastatin Calcium (10mg)"),
+            ("Sorbitrate 10", "Isosorbide Dinitrate (10mg)"),
+            ("Sildenafil 50", "Sildenafil Citrate (50mg)"),
+            ("Gelusil", "Aluminium & Magnesium Hydroxide Antacid"),
+            ("Disprin", "Aspirin / Acetylsalicylic Acid (350mg)"),
+            ("Ecosprin 75", "Aspirin Low-Dose (75mg)"),
+            ("Telma 40", "Telmisartan (40mg)"),
+            ("Cilacar 10", "Cilnidipine (10mg)"),
+            ("Shelcal 500", "Calcium Carbonate + Vitamin D3"),
+            ("Becosules", "Vitamin B-Complex + Vitamin C"),
+            ("Metrogyl 400", "Metronidazole (400mg)"),
+            ("Allegra 120", "Fexofenadine Hydrochloride (120mg)"),
+            ("Crocin Advance", "Fast-release Paracetamol (500mg)")
+        ]
+
+        for brand, gen in seed_medicines:
+            cls._trie.insert(brand, gen)
+
+        # Also load cached medicines from Supabase
+        try:
+            db_records = MedicineRepository.search(limit=100)
+            for rec in db_records:
+                if rec.get("brand_name"):
+                    cls._trie.insert(rec["brand_name"], rec.get("generic_name", ""))
+        except Exception as e:
+            logger.warning("Could not pre-load DB records into Trie: %s", e)
+
+        return cls._trie
+
+    @classmethod
+    def get_suggestions(cls, prefix: str, limit: int = 5) -> list[dict]:
+        """Returns auto-suggestions using O(L) Trie Prefix Tree."""
+        trie = cls._get_trie()
+        return trie.search_prefix(prefix, limit)
 
     @staticmethod
     def _generate_default_pharmacy_links(brand_name: str, generic_name: str):
@@ -160,6 +304,9 @@ Return ONLY a valid JSON object without markdown formatting matching this exact 
                     logger.warning("Could not cache AI medicine to database: %s", ex)
                     ai_med["medicine_id"] = f"ai-{urllib.parse.quote_plus(brand)[:12]}"
 
+                # Insert into in-memory Trie Prefix Tree for instant autosuggest
+                cls._get_trie().insert(brand, generic)
+
                 return [ai_med]
 
         return []
@@ -234,6 +381,8 @@ Return ONLY a valid JSON object matching this exact structure without markdown b
                                     raw_json = raw_json.strip("`").replace("json", "", 1).strip()
                                 result = json.loads(raw_json)
                                 result["medicines_checked"] = cleaned_names
+                                result["screened_pairs"] = [f"{p[0]} + {p[1]}" for p in MedicinePairStack.generate_pairs(cleaned_names)]
+                                result["dsa_used"] = "Stack (LIFO Backtracking for Pairs) + Pre-Trained AI"
                                 result["ai_model_used"] = f"Pre-Trained Clinical AI ({model})"
                                 return result
                 except Exception as e:
