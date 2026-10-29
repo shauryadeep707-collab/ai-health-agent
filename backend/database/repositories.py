@@ -601,6 +601,42 @@ class MedicineRepository:
         return db_manager.execute_query(query, {"medicine_id": medicine_id}, fetchone=True)
 
     @staticmethod
+    def create(med_dict):
+        med_id = f"med-{uuid.uuid4().hex[:10]}"
+        sql = """
+        INSERT INTO MEDICINE_INFORMATION (
+            medicine_id, brand_name, generic_name, therapeutic_class,
+            common_uses, safety_precautions, contraindications,
+            common_side_effects, allergy_warnings, rx_required,
+            trusted_source, pharmacy_links_json
+        ) VALUES (
+            :medicine_id, :brand_name, :generic_name, :therapeutic_class,
+            :common_uses, :safety_precautions, :contraindications,
+            :common_side_effects, :allergy_warnings, :rx_required,
+            :trusted_source, :pharmacy_links_json
+        )
+        """
+        try:
+            db_manager.execute_query(sql, {
+                "medicine_id": med_id,
+                "brand_name": med_dict.get("brand_name", "").strip(),
+                "generic_name": med_dict.get("generic_name", "").strip(),
+                "therapeutic_class": med_dict.get("therapeutic_class", "General Pharmacology"),
+                "common_uses": med_dict.get("common_uses", ""),
+                "safety_precautions": med_dict.get("safety_precautions", ""),
+                "contraindications": med_dict.get("contraindications", ""),
+                "common_side_effects": med_dict.get("common_side_effects", ""),
+                "allergy_warnings": med_dict.get("allergy_warnings", ""),
+                "rx_required": 1 if med_dict.get("rx_required") else 0,
+                "trusted_source": med_dict.get("trusted_source", "WHO Essential Medicines & AI Clinical Model"),
+                "pharmacy_links_json": med_dict.get("pharmacy_links_json", None)
+            })
+            return med_id
+        except Exception as e:
+            logger.warning("Could not cache medicine to database: %s", e)
+            return med_id
+
+    @staticmethod
     def check_interactions(medicine_ids):
         if len(medicine_ids) < 2:
             return []
@@ -626,27 +662,40 @@ class MedicineRepository:
 class ProductRepository:
     @staticmethod
     def search(query=None, category=None, limit=20):
-        sql = "SELECT * FROM HEALTH_PRODUCTS WHERE 1=1"
-        params = {"limit": limit}
-        if category and category.strip():
-            sql += " AND lower(category) = lower(:category)"
-            params["category"] = category.strip()
-        if query and query.strip():
-            sql += " AND (lower(product_name) LIKE lower(:query) OR lower(description) LIKE lower(:query))"
-            params["query"] = f"%{query.strip()}%"
-        sql += " ORDER BY product_name ASC LIMIT :limit"
-        return db_manager.execute_query(sql, params, fetchall=True)
+        try:
+            sql = "SELECT * FROM HEALTH_PRODUCTS WHERE 1=1"
+            params = {"limit": limit}
+            if category and category.strip():
+                sql += " AND lower(category) = lower(:category)"
+                params["category"] = category.strip()
+            if query and query.strip():
+                sql += " AND (lower(product_name) LIKE lower(:query) OR lower(description) LIKE lower(:query))"
+                params["query"] = f"%{query.strip()}%"
+            sql += " ORDER BY product_name ASC LIMIT :limit"
+            rows = db_manager.execute_query(sql, params, fetchall=True)
+            return rows if rows is not None else []
+        except Exception as e:
+            print(f"[ProductRepository.search ERROR]: {e}")
+            return []
 
     @staticmethod
     def get_categories():
-        query = "SELECT DISTINCT category FROM HEALTH_PRODUCTS ORDER BY category ASC"
-        rows = db_manager.execute_query(query, fetchall=True)
-        return [r["category"] for r in rows if r.get("category")]
+        try:
+            query = "SELECT DISTINCT category FROM HEALTH_PRODUCTS ORDER BY category ASC"
+            rows = db_manager.execute_query(query, fetchall=True)
+            return [r["category"] for r in rows if r.get("category")] if rows else []
+        except Exception as e:
+            print(f"[ProductRepository.get_categories ERROR]: {e}")
+            return []
 
     @staticmethod
     def find_by_id(product_id):
-        query = "SELECT * FROM HEALTH_PRODUCTS WHERE product_id = :product_id"
-        return db_manager.execute_query(query, {"product_id": product_id}, fetchone=True)
+        try:
+            query = "SELECT * FROM HEALTH_PRODUCTS WHERE product_id = :product_id"
+            return db_manager.execute_query(query, {"product_id": product_id}, fetchone=True)
+        except Exception as e:
+            print(f"[ProductRepository.find_by_id ERROR]: {e}")
+            return None
 
 # -----------------------------------------------------------------------------
 # 9. Appointment Repository

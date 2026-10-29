@@ -7,6 +7,9 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/dashboard.css">
   <link rel="stylesheet" href="css/forms.css">
+  <style>
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
 
@@ -42,35 +45,75 @@
     </div>
 
     <!-- Drug-Drug Interaction Checker -->
-    <div class="panel" style="border-left: 4px solid var(--warning); margin-bottom:2rem;">
-      <div class="panel-header">
-        <h3 class="panel-title">⚠️ Clinical Drug-Drug Interaction Checker</h3>
+    <div class="panel" style="border-left: 4px solid var(--warning); margin-bottom:2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+      <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+        <h3 class="panel-title" style="margin:0;">⚠️ AI Clinical Drug-Drug Interaction Checker</h3>
+        <span class="badge badge-verified" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-weight:700;">
+          ⚡ Powered by Pre-Trained Clinical AI (Gemini)
+        </span>
       </div>
-      <p style="font-size:0.9rem; color:var(--slate-600); margin-bottom:1rem;">
-        Select two or more medications to check for known adverse clinical interactions:
+      <p style="font-size:0.9rem; color:var(--slate-600); margin:0.75rem 0 0.5rem 0;">
+        Screen any combination of medications, brand names, or active chemical salts for adverse biochemical interactions, clinical contraindications, and metabolic competition.
       </p>
 
-      <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem;">
-        <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem;">
-          <input type="checkbox" name="med-interaction" value="med-001"> Paracetamol (Dolo 650)
-        </label>
-        <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem;">
-          <input type="checkbox" name="med-interaction" value="med-002"> Metformin (Glycomet)
-        </label>
-        <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem;">
-          <input type="checkbox" name="med-interaction" value="med-003"> Atorvastatin (Lipitor)
-        </label>
-        <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem;">
-          <input type="checkbox" name="med-interaction" value="med-004"> Amoxicillin + Clavulanate (Augmentin)
-        </label>
-        <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem;">
-          <input type="checkbox" name="med-interaction" value="med-005"> Omeprazole (Omez)
-        </label>
+      <!-- Viva Demo Presets -->
+      <div style="margin: 0.75rem 0 1rem 0; padding: 0.75rem 1rem; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
+        <div style="font-size: 0.8rem; font-weight: 700; color: var(--slate-600); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px;">
+          🎯 Ready Viva / Demo Pairs (Click to Test Instantly):
+        </div>
+        <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+          <button type="button" class="btn btn-sm" onclick="selectDemoPair('Aspirin, Combiflam')" style="background:#fef2f2; border:1px solid #fecaca; color:#991b1b; font-weight:600; font-size:0.8rem; border-radius:20px; padding:0.25rem 0.75rem;">
+            🔴 Aspirin + Combiflam (Severe Bleeding Risk)
+          </button>
+          <button type="button" class="btn btn-sm" onclick="selectDemoPair('Sorbitrate, Sildenafil')" style="background:#fef2f2; border:1px solid #fecaca; color:#991b1b; font-weight:600; font-size:0.8rem; border-radius:20px; padding:0.25rem 0.75rem;">
+            ⛔ Sorbitrate + Sildenafil (Fatal BP Drop)
+          </button>
+          <button type="button" class="btn btn-sm" onclick="selectDemoPair('Ciprofloxacin, Gelusil (Antacid)')" style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; font-weight:600; font-size:0.8rem; border-radius:20px; padding:0.25rem 0.75rem;">
+            🟡 Ciprofloxacin + Gelusil (Absorption Blocked)
+          </button>
+          <button type="button" class="btn btn-sm" onclick="selectDemoPair('Dolo 650, Glycomet')" style="background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; font-weight:600; font-size:0.8rem; border-radius:20px; padding:0.25rem 0.75rem;">
+            🟢 Dolo 650 + Glycomet (Safe Combination)
+          </button>
+          <button type="button" class="btn btn-sm" onclick="selectDemoPair('Pantoprazole (Pan 40), Dolo 650')" style="background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; font-weight:600; font-size:0.8rem; border-radius:20px; padding:0.25rem 0.75rem;">
+            🟢 Pan 40 + Dolo 650 (Safe Combination)
+          </button>
+        </div>
       </div>
 
-      <button onclick="checkInteractions()" class="btn btn-secondary btn-sm">
-        Analyze Pairwise Interactions
-      </button>
+      <!-- Custom Input & Quick Select Checkboxes -->
+      <div style="margin-bottom: 0.75rem;">
+        <label style="display:block; font-size:0.85rem; font-weight:700; color:var(--dark); margin-bottom:0.35rem;">
+          Enter 2 or more medicines (separated by commas) or choose below:
+        </label>
+        <div style="display:flex; gap:0.5rem;">
+          <input type="text" id="custom-interaction-input" class="form-control" placeholder="e.g. Aspirin, Combiflam or Dolo 650, Glycomet..." value="Aspirin, Combiflam" style="font-weight:600; font-size:0.95rem;">
+          <button onclick="checkInteractions()" class="btn btn-primary" id="btn-check-interactions" style="white-space:nowrap; padding:0.5rem 1.25rem;">
+            ⚡ Check Interactions
+          </button>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.75rem; font-size:0.85rem; color:var(--slate-600);">
+        <span style="font-weight:600;">Quick Add:</span>
+        <label style="display:inline-flex; align-items:center; gap:0.3rem; cursor:pointer;">
+          <input type="checkbox" class="chk-quick-med" value="Paracetamol (Dolo 650)" onchange="syncCheckboxesToInput()"> Paracetamol
+        </label>
+        <label style="display:inline-flex; align-items:center; gap:0.3rem; cursor:pointer;">
+          <input type="checkbox" class="chk-quick-med" value="Metformin (Glycomet)" onchange="syncCheckboxesToInput()"> Metformin
+        </label>
+        <label style="display:inline-flex; align-items:center; gap:0.3rem; cursor:pointer;">
+          <input type="checkbox" class="chk-quick-med" value="Aspirin" onchange="syncCheckboxesToInput()"> Aspirin
+        </label>
+        <label style="display:inline-flex; align-items:center; gap:0.3rem; cursor:pointer;">
+          <input type="checkbox" class="chk-quick-med" value="Combiflam (Ibuprofen + Paracetamol)" onchange="syncCheckboxesToInput()"> Combiflam
+        </label>
+        <label style="display:inline-flex; align-items:center; gap:0.3rem; cursor:pointer;">
+          <input type="checkbox" class="chk-quick-med" value="Atorvastatin (Lipitor)" onchange="syncCheckboxesToInput()"> Atorvastatin
+        </label>
+        <label style="display:inline-flex; align-items:center; gap:0.3rem; cursor:pointer;">
+          <input type="checkbox" class="chk-quick-med" value="Omeprazole (Omez)" onchange="syncCheckboxesToInput()"> Omeprazole
+        </label>
+      </div>
 
       <div id="interaction-results" style="margin-top:1rem;"></div>
     </div>
@@ -161,39 +204,152 @@
       }
     }
 
+    function selectDemoPair(pairText) {
+      const input = document.getElementById("custom-interaction-input");
+      if (input) {
+        input.value = pairText;
+        checkInteractions();
+      }
+    }
+
+    function syncCheckboxesToInput() {
+      const checkedBoxes = Array.from(document.querySelectorAll('.chk-quick-med:checked')).map(el => el.value);
+      const input = document.getElementById("custom-interaction-input");
+      if (input && checkedBoxes.length > 0) {
+        input.value = checkedBoxes.join(", ");
+      }
+    }
+
     async function checkInteractions() {
-      const checked = Array.from(document.querySelectorAll('input[name="med-interaction"]:checked')).map(el => el.value);
+      const inputVal = document.getElementById("custom-interaction-input")?.value.trim() || "";
       const resContainer = document.getElementById("interaction-results");
+      const btn = document.getElementById("btn-check-interactions");
       if (!resContainer) return;
 
-      if (checked.length < 2) {
-        resContainer.innerHTML = `<div class="alert alert-warning">Please check at least 2 medications to screen for adverse interactions.</div>`;
+      const medNames = inputVal.split(",").map(s => s.trim()).filter(s => s.length > 0);
+      if (medNames.length < 2) {
+        resContainer.innerHTML = `<div class="alert alert-warning" style="border-radius:8px;">⚠️ Please specify at least 2 medications separated by commas (e.g. <em>Aspirin, Combiflam</em>) or click any demo preset above.</div>`;
         return;
       }
 
+      const origBtnText = btn ? btn.innerHTML : "";
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `⏳ Analyzing pharmacology...`;
+      }
+
+      resContainer.innerHTML = `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:1.25rem; text-align:center;">
+          <div style="display:inline-block; width:26px; height:26px; border:3px solid #0284c7; border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite; margin-bottom:0.5rem;"></div>
+          <div style="font-weight:700; color:var(--dark);">Running Clinical Drug-Drug Interaction Model...</div>
+          <div style="font-size:0.85rem; color:var(--slate-500); margin-top:0.25rem;">Screening metabolic pathways, CYP450 competition, and adverse physiological contraindications.</div>
+        </div>
+      `;
+
       try {
-        const res = await fetch("/api/medicines/check-interactions", {
+        const res = await fetch("/api/medicines/ai-check-interactions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ medicine_ids: checked })
+          body: JSON.stringify({ medicine_names: medNames })
         });
         const data = await res.json();
 
-        if (data.success && data.has_interactions) {
-          resContainer.innerHTML = data.interactions.map(item => `
-            <div class="alert alert-danger" style="margin-bottom:0.75rem;">
-              <div>
-                <strong>⚠️ Potential Adverse Interaction: ${item.med_a_name} + ${item.med_b_name} [Severity: ${item.severity}]</strong>
-                <p style="margin-top:0.25rem;">${item.interaction_desc}</p>
-                <p style="margin-top:0.25rem; font-style:italic;"><strong>Doctor Advice:</strong> ${item.clinical_advice}</p>
+        if (data.success) {
+          const risk = (data.risk_level || "SAFE").toUpperCase();
+          let badgeBg = "#10b981";
+          let badgeText = "#ffffff";
+          let borderCol = "#059669";
+          let cardBg = "#ecfdf5";
+          let icon = "✅";
+
+          if (risk === "CRITICAL") {
+            badgeBg = "#7f1d1d";
+            badgeText = "#fef2f2";
+            borderCol = "#b91c1c";
+            cardBg = "#fef2f2";
+            icon = "⛔";
+          } else if (risk === "SEVERE") {
+            badgeBg = "#dc2626";
+            badgeText = "#ffffff";
+            borderCol = "#ef4444";
+            cardBg = "#fff1f2";
+            icon = "🚨";
+          } else if (risk === "MODERATE") {
+            badgeBg = "#d97706";
+            badgeText = "#ffffff";
+            borderCol = "#f59e0b";
+            cardBg = "#fffbeb";
+            icon = "⚠️";
+          }
+
+          resContainer.innerHTML = `
+            <div style="background:${cardBg}; border:2px solid ${borderCol}; border-radius:12px; padding:1.25rem; margin-top:0.5rem; box-shadow:0 4px 14px rgba(0,0,0,0.05);">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem; border-bottom:1px solid rgba(0,0,0,0.08); padding-bottom:0.5rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <span style="font-size:1.4rem;">${icon}</span>
+                  <div>
+                    <h4 style="font-size:1.1rem; font-weight:800; margin:0; color:#0f172a;">
+                      Interaction Screening: ${medNames.join(" + ")}
+                    </h4>
+                    <span style="font-size:0.78rem; color:var(--slate-500);">Evaluated via ${data.ai_model_used || "Pre-Trained Clinical AI (Gemini 3.5 Flash-Lite)"}</span>
+                  </div>
+                </div>
+                <span style="background:${badgeBg}; color:${badgeText}; padding:0.35rem 0.85rem; border-radius:20px; font-weight:800; font-size:0.85rem; letter-spacing:0.5px;">
+                  RISK: ${risk}
+                </span>
               </div>
+
+              <!-- Summary -->
+              <div style="margin-bottom:0.75rem;">
+                <div style="font-weight:700; font-size:0.9rem; color:#0f172a; margin-bottom:0.2rem;">
+                  📋 Clinical Assessment:
+                </div>
+                <p style="font-size:0.92rem; line-height:1.5; color:#1e293b; margin:0;">
+                  ${data.summary || (data.has_interactions ? "Adverse interaction identified." : "No significant adverse interaction found.")}
+                </p>
+              </div>
+
+              <!-- Mechanism -->
+              ${data.mechanism ? `
+                <div style="background:rgba(255,255,255,0.7); border-radius:8px; padding:0.75rem 1rem; margin-bottom:0.75rem; border:1px solid rgba(0,0,0,0.05);">
+                  <strong style="font-size:0.85rem; color:#0f172a; display:block; margin-bottom:0.25rem;">
+                    🧬 Pharmacological Mechanism:
+                  </strong>
+                  <span style="font-size:0.88rem; color:#334155; line-height:1.45;">${data.mechanism}</span>
+                </div>
+              ` : ''}
+
+              <!-- Precautions & Actionable Timing -->
+              ${data.precautions ? `
+                <div style="margin-bottom:0.75rem;">
+                  <strong style="font-size:0.85rem; color:#0f172a; display:block; margin-bottom:0.25rem;">
+                    🛡️ Actionable Precautions & Administration Advice:
+                  </strong>
+                  <p style="font-size:0.88rem; color:#334155; margin:0; line-height:1.45;">${data.precautions}</p>
+                </div>
+              ` : ''}
+
+              <!-- Safe Alternatives -->
+              ${data.safe_alternatives ? `
+                <div style="background:#ffffff; border-left:4px solid #0284c7; border-radius:6px; padding:0.6rem 0.9rem; margin-top:0.5rem;">
+                  <strong style="font-size:0.82rem; color:#0369a1; text-transform:uppercase; display:block; margin-bottom:0.2rem;">
+                    💡 Recommended Safe Alternative:
+                  </strong>
+                  <span style="font-size:0.88rem; color:#0f172a; font-weight:600;">${data.safe_alternatives}</span>
+                </div>
+              ` : ''}
             </div>
-          `).join("");
+          `;
         } else {
-          resContainer.innerHTML = `<div class="alert alert-success">✓ No known adverse pairwise interactions detected between the selected medications in our reference database.</div>`;
+          resContainer.innerHTML = `<div class="alert alert-danger">${data.error || "Failed to analyze medications."}</div>`;
         }
       } catch (err) {
         resContainer.innerHTML = `<div class="alert alert-danger">Interaction check failed: ${err.message}</div>`;
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = origBtnText;
+        }
       }
     }
 
