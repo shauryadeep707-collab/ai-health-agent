@@ -54,7 +54,7 @@ class Config:
     _default_b64 = "QVEuQWI4Uk42SWVXT2w0R3p3eVVaSWdLcmZIenQyOXFHa2F6OFpELTZkZnBWajNkZTl1MXc="
     _default_gemini_key = _b64.b64decode(_default_b64).decode("utf-8")
     GEMINI_API_KEY = _default_gemini_key if (not _raw_gemini_key or _raw_gemini_key.startswith("PASTE_")) else _raw_gemini_key
-    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
     OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "med-ai")
 

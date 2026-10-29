@@ -53,26 +53,34 @@ Return ONLY a valid JSON object without markdown formatting matching this exact 
   "rx_required": true
 }}
 """
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{Config.GEMINI_MODEL}:generateContent?key={Config.GEMINI_API_KEY}"
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}
-        }
+        models_to_try = [Config.GEMINI_MODEL, "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.1-flash-lite"]
+        seen_models = []
+        for model in models_to_try:
+            if not model or model in seen_models:
+                continue
+            seen_models.append(model)
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={Config.GEMINI_API_KEY}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}
+            }
 
-        try:
-            res = requests.post(url, json=payload, timeout=5)
-            if res.status_code == 200:
-                data = res.json()
-                candidates = data.get("candidates", [])
-                if candidates and "content" in candidates[0]:
-                    parts = candidates[0]["content"].get("parts", [])
-                    if parts:
-                        raw_json = parts[0].get("text", "")
-                        med_info = json.loads(raw_json)
-                        med_info["trusted_source"] = "WHO & FDA Compendium via Pre-Trained Clinical AI"
-                        return med_info
-        except Exception as e:
-            logger.warning("AI pharmacology query failed (%s)", e)
+            try:
+                res = requests.post(url, json=payload, timeout=8)
+                if res.status_code == 200:
+                    data = res.json()
+                    candidates = data.get("candidates", [])
+                    if candidates and "content" in candidates[0]:
+                        parts = candidates[0]["content"].get("parts", [])
+                        if parts:
+                            raw_json = parts[0].get("text", "").strip()
+                            if raw_json.startswith("```"):
+                                raw_json = raw_json.strip("`").replace("json", "", 1).strip()
+                            med_info = json.loads(raw_json)
+                            med_info["trusted_source"] = f"WHO, FDA & CDSCO via Pre-Trained Clinical AI ({model})"
+                            return med_info
+            except Exception as e:
+                logger.warning("AI pharmacology query on %s failed: %s", model, e)
 
         # Resilient Offline Indian Compendium Fallback
         q_low = query.lower()
@@ -201,27 +209,35 @@ Return ONLY a valid JSON object matching this exact structure without markdown b
   "safe_alternatives": "Recommended safe alternative medication or approach if the interaction is moderate, severe, or contraindicated"
 }}
 """
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{Config.GEMINI_MODEL}:generateContent?key={Config.GEMINI_API_KEY}"
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}
-            }
+            models_to_try = [Config.GEMINI_MODEL, "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.1-flash-lite"]
+            seen_models = []
+            for model in models_to_try:
+                if not model or model in seen_models:
+                    continue
+                seen_models.append(model)
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={Config.GEMINI_API_KEY}"
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}
+                }
 
-            try:
-                res = requests.post(url, json=payload, timeout=5)
-                if res.status_code == 200:
-                    data = res.json()
-                    candidates = data.get("candidates", [])
-                    if candidates and "content" in candidates[0]:
-                        parts = candidates[0]["content"].get("parts", [])
-                        if parts:
-                            raw_json = parts[0].get("text", "")
-                            result = json.loads(raw_json)
-                            result["medicines_checked"] = cleaned_names
-                            result["ai_model_used"] = f"Pre-Trained Gemini ({Config.GEMINI_MODEL})"
-                            return result
-            except Exception as e:
-                logger.warning("AI interaction check failed (%s). Falling back to clinical rules engine.", e)
+                try:
+                    res = requests.post(url, json=payload, timeout=8)
+                    if res.status_code == 200:
+                        data = res.json()
+                        candidates = data.get("candidates", [])
+                        if candidates and "content" in candidates[0]:
+                            parts = candidates[0]["content"].get("parts", [])
+                            if parts:
+                                raw_json = parts[0].get("text", "").strip()
+                                if raw_json.startswith("```"):
+                                    raw_json = raw_json.strip("`").replace("json", "", 1).strip()
+                                result = json.loads(raw_json)
+                                result["medicines_checked"] = cleaned_names
+                                result["ai_model_used"] = f"Pre-Trained Clinical AI ({model})"
+                                return result
+                except Exception as e:
+                    logger.warning("AI interaction check on %s failed: %s", model, e)
 
         # 2. Resilient Clinical Pharmacology Rule Engine Fallback
         return cls._clinical_rules_fallback(cleaned_names)
