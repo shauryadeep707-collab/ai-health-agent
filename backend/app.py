@@ -9,6 +9,7 @@ from backend.routes.ai_routes import ai_bp
 from backend.routes.appointment_routes import appointment_bp
 from backend.routes.medicine_routes import medicine_bp
 from backend.routes.product_routes import product_bp
+from backend.routes.teleconsultation_routes import teleconsult_bp
 
 def create_app(config_class=Config):
     app = Flask(__name__, static_folder=None)
@@ -22,6 +23,7 @@ def create_app(config_class=Config):
     app.register_blueprint(appointment_bp)
     app.register_blueprint(medicine_bp)
     app.register_blueprint(product_bp)
+    app.register_blueprint(teleconsult_bp)
 
     # Ensure upload directory exists
     app.config["UPLOAD_FOLDER"].mkdir(parents=True, exist_ok=True)

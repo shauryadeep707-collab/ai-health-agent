@@ -124,10 +124,32 @@
            TAB 2: APPOINTMENT REQUESTS
            ===================================================================== -->
       <section id="tab-appointments" class="dashboard-tab-content">
-        <div class="dashboard-header">
+        <div class="dashboard-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
           <div>
             <h1 class="dashboard-title">Appointment Requests</h1>
             <p class="dashboard-subtitle">Manage patient consultations and clinical schedules</p>
+          </div>
+          <button onclick="launchInstantDoctorRoom()" class="btn btn-primary" style="background:#0284c7; display:inline-flex; align-items:center; gap:0.4rem; font-weight:700;">
+            🎥 Instant Consultation Room
+          </button>
+        </div>
+
+        <!-- Tele-Consultation Feature Spotlight -->
+        <div class="panel" style="background:linear-gradient(135deg, rgba(2,132,199,0.08), rgba(37,99,235,0.04)); border:1px solid rgba(2,132,199,0.25); margin-bottom:1.5rem; padding:1.25rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <div>
+              <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
+                <span style="font-size:1.3rem;">📹</span>
+                <h3 style="font-size:1.05rem; font-weight:800; color:var(--dark); margin:0;">Encrypted Tele-Consultation Portal (WebRTC)</h3>
+                <span class="badge badge-verified" style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-size:0.75rem;">Voice + Video + In-Call Chat</span>
+              </div>
+              <p style="font-size:0.85rem; color:var(--slate-600); margin:0; line-height:1.4;">
+                Conduct direct browser-to-browser consultations with HD audio, camera, screen sharing, and clinical notes saving without needing any phone numbers.
+              </p>
+            </div>
+            <button onclick="launchInstantDoctorRoom()" class="btn btn-secondary btn-sm" style="white-space:nowrap; font-weight:700;">
+              ⚡ Open Video Room ↗
+            </button>
           </div>
         </div>
 
@@ -319,12 +341,21 @@
                       <td>${a.reason_for_visit || 'General Consultation'}</td>
                       <td><span class="badge ${a.status === 'CONFIRMED' ? 'badge-verified' : 'badge-pending'}">${a.status}</span></td>
                       <td>
-                        ${a.status === 'BOOKED' ? `
-                          <button onclick="updateDoctorApt('${a.appointment_id}', 'CONFIRMED')" class="btn btn-secondary btn-sm">Confirm</button>
-                          <button onclick="updateDoctorApt('${a.appointment_id}', 'CANCELLED')" class="btn btn-outline btn-sm">Decline</button>
-                        ` : (a.status === 'CONFIRMED' ? `
-                          <button onclick="updateDoctorApt('${a.appointment_id}', 'COMPLETED')" class="btn btn-primary btn-sm">Mark Complete</button>
-                        ` : `<span style="font-size:0.8rem; color:var(--slate-400);">-</span>`)}
+                        <div style="display:flex; gap:0.3rem; flex-wrap:wrap; align-items:center;">
+                          ${a.status !== 'CANCELLED' && a.status !== 'COMPLETED' ? `
+                            <a href="teleconsultation/consultation-room.html?room=${a.appointment_id}&role=doctor&doctor=${encodeURIComponent(a.doctor_name || 'Doctor')}&patient=${encodeURIComponent(a.patient_name || 'Patient')}&reason=${encodeURIComponent(a.reason_for_visit || 'Consultation')}" 
+                               class="btn btn-primary btn-sm" 
+                               style="display:inline-flex; align-items:center; gap:0.25rem; text-decoration:none; font-weight:700; background:#0284c7;">
+                              🎥 Start Room
+                            </a>
+                          ` : ''}
+                          ${a.status === 'BOOKED' ? `
+                            <button onclick="updateDoctorApt('${a.appointment_id}', 'CONFIRMED')" class="btn btn-secondary btn-sm">Confirm</button>
+                            <button onclick="updateDoctorApt('${a.appointment_id}', 'CANCELLED')" class="btn btn-outline btn-sm">Decline</button>
+                          ` : (a.status === 'CONFIRMED' ? `
+                            <button onclick="updateDoctorApt('${a.appointment_id}', 'COMPLETED')" class="btn btn-primary btn-sm">Mark Complete</button>
+                          ` : `<span style="font-size:0.8rem; color:var(--slate-400);">-</span>`)}
+                        </div>
                       </td>
                     </tr>
                   `).join("")}
@@ -445,6 +476,13 @@
     async function saveDoctorSettings(e) {
       e.preventDefault();
       alert("Doctor profile settings saved.");
+    }
+
+    function launchInstantDoctorRoom() {
+      const user = Auth.getUser();
+      const docName = user ? (user.full_name || "Doctor") : "Doctor";
+      const randomRoom = "clinic-" + Math.floor(100000 + Math.random() * 900000);
+      window.open(`teleconsultation/consultation-room.html?room=${randomRoom}&role=doctor&doctor=${encodeURIComponent(docName)}&reason=Live+Clinical+Teleconsultation`, '_blank');
     }
 
     document.addEventListener("DOMContentLoaded", () => {

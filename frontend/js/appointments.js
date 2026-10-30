@@ -167,6 +167,11 @@ const Appointments = {
                       <td><span class="badge ${badge}">${a.status}</span></td>
                       <td>
                         ${a.status !== 'CANCELLED' && a.status !== 'COMPLETED' ? `
+                          <a href="teleconsultation/consultation-room.html?room=${a.appointment_id}&role=patient&patient=${encodeURIComponent(a.patient_name || 'Patient')}&doctor=${encodeURIComponent(a.doctor_name || 'Doctor')}&reason=${encodeURIComponent(a.reason_for_visit || 'Clinical Consultation')}" 
+                             class="btn btn-primary btn-sm" 
+                             style="display:inline-flex; align-items:center; gap:0.25rem; text-decoration:none; margin-right:0.35rem; font-weight:700; background:#0284c7;">
+                            🎥 Enter Room
+                          </a>
                           <button onclick="Appointments.cancelAppointment('${a.appointment_id}')" class="btn btn-outline btn-sm" style="color:var(--danger); border-color:var(--danger-light);">
                             Cancel
                           </button>
