@@ -368,38 +368,14 @@
            TAB 5: MY APPOINTMENTS
            ===================================================================== -->
       <section id="tab-appointments" class="dashboard-tab-content">
-        <div class="dashboard-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+        <div class="dashboard-header">
           <div>
-            <h1 class="dashboard-title">My Appointments & Tele-Consultations</h1>
-            <p class="dashboard-subtitle">Track consultation dates, join live video rooms, and view clinical visit notes</p>
+            <h1 class="dashboard-title">My Appointments</h1>
+            <p class="dashboard-subtitle">Track consultation dates, statuses, and physician visit notes</p>
           </div>
-          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-            <button onclick="launchPatientInstantRoom()" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:0.35rem; font-weight:700;">
-              🎥 Join Video Room
-            </button>
-            <button onclick="switchTab('doctors')" class="btn btn-primary btn-sm">
-              + Schedule New Appointment
-            </button>
-          </div>
-        </div>
-
-        <!-- Tele-Consultation Feature Spotlight -->
-        <div class="panel" style="background:linear-gradient(135deg, rgba(2,132,199,0.08), rgba(37,99,235,0.04)); border:1px solid rgba(2,132,199,0.25); margin-bottom:1.5rem; padding:1.25rem;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-            <div>
-              <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
-                <span style="font-size:1.3rem;">📹</span>
-                <h3 style="font-size:1.05rem; font-weight:800; color:var(--dark); margin:0;">Browser-to-Browser Tele-Consultation (WebRTC)</h3>
-                <span class="badge badge-verified" style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-size:0.75rem;">Encrypted Voice + Video + Chat</span>
-              </div>
-              <p style="font-size:0.85rem; color:var(--slate-600); margin:0; line-height:1.4;">
-                Connect directly with your verified doctor through secure peer-to-peer video, clear audio, and real-time chat without sharing your personal phone number.
-              </p>
-            </div>
-            <button onclick="launchPatientInstantRoom()" class="btn btn-primary btn-sm" style="background:#0284c7; white-space:nowrap; font-weight:700;">
-              🎥 Enter Room ↗
-            </button>
-          </div>
+          <button onclick="switchTab('doctors')" class="btn btn-primary btn-sm">
+            + Schedule New Appointment
+          </button>
         </div>
 
         <div class="panel">
@@ -1281,16 +1257,7 @@ async function searchMedicines() {
       }
     }
 
-        function launchPatientInstantRoom() {
-      const user = Auth.getUser();
-      const patientName = user ? (user.full_name || "Patient") : "Patient";
-      const room = prompt("Enter Consultation Room ID (or leave default for demo room):", "clinic-room-101");
-      if (room && room.trim()) {
-        window.open(`teleconsultation/consultation-room.html?room=${encodeURIComponent(room.trim())}&role=patient&patient=${encodeURIComponent(patientName)}&reason=Telemedicine+Consultation`, '_blank');
-      }
-    }
-
-document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", () => {
       if (!Auth.guardPage("PATIENT")) return;
       loadDashboardOverview();
       ReportUpload.initDropzone("report-dropzone", "report-file-input");
