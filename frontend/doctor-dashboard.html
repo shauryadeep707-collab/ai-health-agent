@@ -319,12 +319,23 @@
                       <td>${a.reason_for_visit || 'General Consultation'}</td>
                       <td><span class="badge ${a.status === 'CONFIRMED' ? 'badge-verified' : 'badge-pending'}">${a.status}</span></td>
                       <td>
-                        ${a.status === 'BOOKED' ? `
-                          <button onclick="updateDoctorApt('${a.appointment_id}', 'CONFIRMED')" class="btn btn-secondary btn-sm">Confirm</button>
-                          <button onclick="updateDoctorApt('${a.appointment_id}', 'CANCELLED')" class="btn btn-outline btn-sm">Decline</button>
-                        ` : (a.status === 'CONFIRMED' ? `
-                          <button onclick="updateDoctorApt('${a.appointment_id}', 'COMPLETED')" class="btn btn-primary btn-sm">Mark Complete</button>
-                        ` : `<span style="font-size:0.8rem; color:var(--slate-400);">-</span>`)}
+                        <div style="display:flex; gap:0.35rem; align-items:center; flex-wrap:wrap;">
+                          ${a.status !== 'CANCELLED' && a.status !== 'COMPLETED' ? `
+                            <a href="https://meet.jit.si/AIHeal-Consult-${encodeURIComponent(a.appointment_id)}" 
+                               target="_blank" 
+                               rel="noopener" 
+                               class="btn btn-primary btn-sm" 
+                               style="display:inline-flex; align-items:center; gap:0.25rem; text-decoration:none; font-weight:700; background:#0284c7;">
+                              📹 Start Video Meet ↗
+                            </a>
+                          ` : ''}
+                          ${a.status === 'BOOKED' ? `
+                            <button onclick="updateDoctorApt('${a.appointment_id}', 'CONFIRMED')" class="btn btn-secondary btn-sm">Confirm</button>
+                            <button onclick="updateDoctorApt('${a.appointment_id}', 'CANCELLED')" class="btn btn-outline btn-sm">Decline</button>
+                          ` : (a.status === 'CONFIRMED' ? `
+                            <button onclick="updateDoctorApt('${a.appointment_id}', 'COMPLETED')" class="btn btn-primary btn-sm">Mark Complete</button>
+                          ` : `<span style="font-size:0.8rem; color:var(--slate-400);">-</span>`)}
+                        </div>
                       </td>
                     </tr>
                   `).join("")}

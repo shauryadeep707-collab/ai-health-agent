@@ -167,6 +167,13 @@ const Appointments = {
                       <td><span class="badge ${badge}">${a.status}</span></td>
                       <td>
                         ${a.status !== 'CANCELLED' && a.status !== 'COMPLETED' ? `
+                          <a href="https://meet.jit.si/AIHeal-Consult-${encodeURIComponent(a.appointment_id)}" 
+                             target="_blank" 
+                             rel="noopener" 
+                             class="btn btn-primary btn-sm" 
+                             style="display:inline-flex; align-items:center; gap:0.25rem; text-decoration:none; margin-right:0.35rem; font-weight:700; background:#0284c7;">
+                            📹 Join Video Meet ↗
+                          </a>
                           <button onclick="Appointments.cancelAppointment('${a.appointment_id}')" class="btn btn-outline btn-sm" style="color:var(--danger); border-color:var(--danger-light);">
                             Cancel
                           </button>
