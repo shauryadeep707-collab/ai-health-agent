@@ -62,7 +62,7 @@ const HealthChat = {
         this.historyMemory.push({ sender_type: "PATIENT", message_text: text });
         this.historyMemory.push({ sender_type: "AI_ASSISTANT", message_text: data.response });
 
-        this.appendMessage("ai", data.response, data.disclaimer);
+        this.appendMessage("ai", data.response, data.disclaimer, data.learned_memory, data.profile_memory_updated);
 
         if (data.red_flag_alert) {
           this.showEmergencyBanner();
@@ -86,14 +86,14 @@ const HealthChat = {
     }
   },
 
-  appendMessage(sender, text, disclaimer = "") {
+  appendMessage(sender, text, disclaimer = "", learnedMemory = null, isPersisted = false) {
     const container = document.getElementById("chat-messages-container");
     if (!container) return;
 
     const msgDiv = document.createElement("div");
     msgDiv.className = `chat-msg ${sender}`;
 
-    const avatarText = sender === "patient" ? "ME" : "AI";
+    const avatarText = sender === "patient" ? "ME" : "Dr.";
     const avatarClass = sender === "patient" ? "avatar-patient" : "avatar-ai";
 
     // Clean markdown-like formatting
@@ -102,10 +102,27 @@ const HealthChat = {
       .replace(/\*(.*?)\*/g, "<em>$1</em>")
       .replace(/\n/g, "<br>");
 
+    // Memory badge if learned facts occurred
+    let memoryBadgeHtml = "";
+    if (learnedMemory && (learnedMemory.allergies?.length || learnedMemory.conditions?.length)) {
+      const items = [
+        ...(learnedMemory.allergies || []).map(a => `Allergy: ${a}`),
+        ...(learnedMemory.conditions || []).map(c => `Condition: ${c}`)
+      ].join(", ");
+
+      memoryBadgeHtml = `
+        <div style="margin-top:0.6rem; padding:0.4rem 0.75rem; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; font-size:0.82rem; color:#065f46; display:flex; align-items:center; gap:0.4rem;">
+          <span>🧠</span>
+          <span><strong>Doctor's Memory Saved:</strong> ${items}${isPersisted ? " (Synced to Patient Database)" : ""}</span>
+        </div>
+      `;
+    }
+
     msgDiv.innerHTML = `
       <div class="chat-avatar ${avatarClass}">${avatarText}</div>
       <div class="chat-bubble">
         <div>${formattedText}</div>
+        ${memoryBadgeHtml}
         ${disclaimer ? `<div class="chat-disclaimer">ℹ️ ${disclaimer}</div>` : ""}
       </div>
     `;
@@ -123,9 +140,10 @@ const HealthChat = {
     div.id = id;
     div.className = "chat-msg ai";
     div.innerHTML = `
-      <div class="chat-avatar avatar-ai">AI</div>
-      <div class="chat-bubble" style="color:var(--slate-400); font-style:italic;">
-        Thinking & checking medical safety guidelines...
+      <div class="chat-avatar avatar-ai">Dr.</div>
+      <div class="chat-bubble" style="color:var(--slate-500); font-style:italic; display:flex; align-items:center; gap:0.5rem;">
+        <span class="loading-spinner" style="width:14px; height:14px; border:2px solid #cbd5e1; border-top-color:#0284c7; border-radius:50%; animation:spin 0.8s linear infinite;"></span>
+        Dr. Aanya is reviewing your symptoms & clinical memory...
       </div>
     `;
     container.appendChild(div);

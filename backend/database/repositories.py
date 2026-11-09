@@ -121,6 +121,72 @@ class PatientProfileRepository:
             "chronic_conditions": chronic_conditions
         })
 
+    @staticmethod
+    def update_clinical_memory(patient_id, new_allergies=None, new_chronic_conditions=None):
+        """
+        Appends newly learned clinical facts (allergies, chronic conditions)
+        to the patient's persistent medical profile in the database.
+        """
+        current = PatientProfileRepository.find_by_id(patient_id)
+        if not current:
+            return None
+
+        updated = False
+        curr_allergies_raw = current.get("allergies") or ""
+        curr_allergies = [
+            a.strip() for a in curr_allergies_raw.split(",")
+            if a.strip() and a.strip().lower() not in ("none recorded", "none", "n/a", "no")
+        ]
+
+        curr_conditions_raw = current.get("chronic_conditions") or ""
+        curr_conditions = [
+            c.strip() for c in curr_conditions_raw.split(",")
+            if c.strip() and c.strip().lower() not in ("none recorded", "none", "n/a", "no")
+        ]
+
+        learned_allergies_added = []
+        if new_allergies:
+            for item in new_allergies:
+                clean_item = str(item).strip().title()
+                if clean_item and clean_item.lower() not in ("none", "n/a", "no", "null"):
+                    if not any(clean_item.lower() == a.lower() for a in curr_allergies):
+                        curr_allergies.append(clean_item)
+                        learned_allergies_added.append(clean_item)
+                        updated = True
+
+        learned_conditions_added = []
+        if new_chronic_conditions:
+            for item in new_chronic_conditions:
+                clean_item = str(item).strip().title()
+                if clean_item and clean_item.lower() not in ("none", "n/a", "no", "null"):
+                    if not any(clean_item.lower() == c.lower() for c in curr_conditions):
+                        curr_conditions.append(clean_item)
+                        learned_conditions_added.append(clean_item)
+                        updated = True
+
+        if updated:
+            final_allergies = ", ".join(curr_allergies) if curr_allergies else None
+            final_conditions = ", ".join(curr_conditions) if curr_conditions else None
+            query = """
+            UPDATE PATIENT_PROFILES
+            SET allergies = :allergies,
+                chronic_conditions = :chronic_conditions,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE patient_id = :patient_id
+            """
+            db_manager.execute_query(query, {
+                "patient_id": patient_id,
+                "allergies": final_allergies,
+                "chronic_conditions": final_conditions
+            })
+            return {
+                "allergies": final_allergies,
+                "chronic_conditions": final_conditions,
+                "added_allergies": learned_allergies_added,
+                "added_conditions": learned_conditions_added
+            }
+        return None
+
 # -----------------------------------------------------------------------------
 # 3. Doctor Profile Repository
 # -----------------------------------------------------------------------------

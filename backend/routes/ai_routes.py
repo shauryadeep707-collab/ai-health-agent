@@ -68,12 +68,27 @@ def chat_consultation():
         patient_profile=pat
     )
 
+    # Dynamic Patient Clinical Memory Persistence (Supabase / SQLite)
+    learned_info = guidance.get("learned_memory")
+    profile_updated = False
+    if pat and learned_info:
+        try:
+            update_res = PatientProfileRepository.update_clinical_memory(
+                patient_id=pat["patient_id"],
+                new_allergies=learned_info.get("allergies"),
+                new_chronic_conditions=learned_info.get("conditions")
+            )
+            if update_res:
+                profile_updated = True
+        except Exception as e:
+            ai_bp.logger.warning("Clinical memory auto-persistence error: %s", e)
+
     # Save AI response message if patient profile exists
     if pat and consultation_id != "guest-session":
         ConsultationRepository.add_message(
             consultation_id=consultation_id,
             sender_type="AI_ASSISTANT",
-            sender_id="AI_HEALTH_AGENT",
+            sender_id="DR_AANYA_AI",
             message_text=guidance["message"],
             disclaimer_note=guidance["disclaimer"]
         )
@@ -93,7 +108,9 @@ def chat_consultation():
         "disclaimer": guidance["disclaimer"],
         "follow_up_questions": guidance.get("follow_up_questions", []),
         "recommended_specialty": guidance.get("recommended_specialty", "General Medicine"),
-        "ai_provider": guidance.get("ai_provider")
+        "ai_provider": guidance.get("ai_provider"),
+        "learned_memory": guidance.get("learned_memory"),
+        "profile_memory_updated": profile_updated
     })
 
 @ai_bp.route("/consultations", methods=["GET"])
