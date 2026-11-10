@@ -75,24 +75,53 @@ def book_appointment():
     if doctor.get("verification_status") != "VERIFIED":
         return jsonify({"success": False, "error": "Appointments can only be scheduled with verified medical doctors."}), 400
 
+    import re
+    # Check if doctor is Dr. Priya / AI Doctor Specialist who automatically accepts bookings
+    doc_name = (doctor.get("full_name") or "").lower()
+    doc_bio = (doctor.get("bio") or "").lower()
+    doc_specialty = (doctor.get("specialty") or "").lower()
+    is_ai_doctor = "priya" in doc_name or "ai" in doc_name or "ai" in doc_bio or "ai" in doc_specialty
+
+    initial_status = "CONFIRMED" if is_ai_doctor else "BOOKED"
+
     apt_id = AppointmentRepository.create(
         patient_id=pat["patient_id"],
         doctor_id=doctor_id,
         appointment_date=date_str,
         slot_time=slot_time,
-        reason_for_visit=reason
+        reason_for_visit=reason,
+        status=initial_status
     )
+
+    clean_doc_name = re.sub(r"^dr\.?\s*", "", doctor.get("full_name", ""), flags=re.IGNORECASE).strip()
+
+    if is_ai_doctor:
+        AppointmentRepository.update_status(
+            apt_id, "CONFIRMED",
+            doctor_notes="Appointment automatically accepted by Dr. Priya (AI Clinical Specialist). Video Consultation room is active."
+        )
+        msg = f"Appointment instantly accepted & confirmed by Dr. {clean_doc_name} (AI Specialist)! Your Video Consultation room is ready."
+    else:
+        msg = f"Appointment request submitted with Dr. {clean_doc_name} for {date_str} at {slot_time}. Awaiting doctor confirmation."
 
     log_audit_event(
         "APPOINTMENT_BOOKED", "APPOINTMENTS", apt_id, "SUCCESS",
-        {"doctor_id": doctor_id, "patient_id": pat["patient_id"], "date": date_str, "time": slot_time}
+        {
+            "doctor_id": doctor_id,
+            "patient_id": pat["patient_id"],
+            "date": date_str,
+            "time": slot_time,
+            "status": initial_status,
+            "is_auto_accepted": is_ai_doctor
+        }
     )
 
     return jsonify({
         "success": True,
-        "message": f"Appointment booked successfully with Dr. {doctor['full_name']} for {date_str} at {slot_time}.",
+        "message": msg,
         "appointment_id": apt_id,
-        "status": "BOOKED"
+        "status": initial_status,
+        "is_auto_accepted": is_ai_doctor
     }), 201
 
 @appointment_bp.route("/my", methods=["GET"])

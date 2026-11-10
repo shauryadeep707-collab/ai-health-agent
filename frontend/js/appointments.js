@@ -153,7 +153,8 @@ const Appointments = {
               </thead>
               <tbody>
                 ${data.appointments.map(a => {
-                  const displayName = a.doctor_name ? `Dr. ${a.doctor_name}` : (a.patient_name || 'Patient');
+                  let cleanDocName = (a.doctor_name || "").replace(/^dr\.?\s*/i, "").trim();
+                  const displayName = cleanDocName ? `Dr. ${cleanDocName}` : (a.patient_name || 'Patient');
                   let badge = "badge-pending";
                   if (a.status === "CONFIRMED") badge = "badge-verified";
                   if (a.status === "CANCELLED") badge = "badge-rejected";
@@ -166,7 +167,7 @@ const Appointments = {
                       <td>${a.reason_for_visit || 'Routine Consultation'}</td>
                       <td><span class="badge ${badge}">${a.status}</span></td>
                       <td>
-                        ${a.status !== 'CANCELLED' && a.status !== 'COMPLETED' ? `
+                        ${a.status === 'CONFIRMED' ? `
                           <a href="https://meet.jit.si/AIHeal-Consult-${encodeURIComponent(a.appointment_id)}" 
                              target="_blank" 
                              rel="noopener" 
@@ -177,7 +178,14 @@ const Appointments = {
                           <button onclick="Appointments.cancelAppointment('${a.appointment_id}')" class="btn btn-outline btn-sm" style="color:var(--danger); border-color:var(--danger-light);">
                             Cancel
                           </button>
-                        ` : `<span style="font-size:0.8rem; color:var(--slate-400);">-</span>`}
+                        ` : (a.status === 'BOOKED' || a.status === 'PENDING' ? `
+                          <span class="badge badge-pending" style="display:inline-flex; align-items:center; gap:0.3rem; margin-right:0.4rem; padding:0.4rem 0.65rem; font-size:0.78rem;">
+                            ⏳ Awaiting Doctor Acceptance
+                          </span>
+                          <button onclick="Appointments.cancelAppointment('${a.appointment_id}')" class="btn btn-outline btn-sm" style="color:var(--danger); border-color:var(--danger-light);">
+                            Cancel
+                          </button>
+                        ` : `<span style="font-size:0.8rem; color:var(--slate-400);">-</span>`)}
                       </td>
                     </tr>
                   `;

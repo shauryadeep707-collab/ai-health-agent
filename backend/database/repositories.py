@@ -768,12 +768,12 @@ class ProductRepository:
 # -----------------------------------------------------------------------------
 class AppointmentRepository:
     @staticmethod
-    def create(patient_id, doctor_id, appointment_date, slot_time, reason_for_visit=""):
+    def create(patient_id, doctor_id, appointment_date, slot_time, reason_for_visit="", status="BOOKED"):
         apt_id = f"apt-{uuid.uuid4().hex[:12]}"
         query = """
         INSERT INTO APPOINTMENTS 
         (appointment_id, patient_id, doctor_id, appointment_date, slot_time, status, reason_for_visit)
-        VALUES (:apt_id, :patient_id, :doctor_id, :appointment_date, :slot_time, 'BOOKED', :reason_for_visit)
+        VALUES (:apt_id, :patient_id, :doctor_id, :appointment_date, :slot_time, :status, :reason_for_visit)
         """
         db_manager.execute_query(query, {
             "apt_id": apt_id,
@@ -781,6 +781,7 @@ class AppointmentRepository:
             "doctor_id": doctor_id,
             "appointment_date": appointment_date,
             "slot_time": slot_time,
+            "status": status,
             "reason_for_visit": reason_for_visit
         })
         return apt_id
