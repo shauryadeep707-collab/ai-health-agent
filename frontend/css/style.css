@@ -264,6 +264,18 @@ a:hover {
   transform: translateY(0);
 }
 
+.btn-block {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+  word-break: break-word;
+  box-sizing: border-box;
+  justify-content: center;
+  line-height: 1.35;
+}
+
 .btn-sm {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;

@@ -86,6 +86,77 @@ const HealthChat = {
     }
   },
 
+  formatDoctorMessage(rawText) {
+    if (!rawText) return "";
+
+    let processed = rawText;
+
+    // 1. Detect Markdown Table (Prescription Box) and transform to rich styled card
+    const tableRegex = /(\|[^\n]+\|\r?\n\|[-:\s|]+\|\r?\n(?:\|[^\n]+\|\r?\n?)+)/g;
+    processed = processed.replace(tableRegex, (match) => {
+      const lines = match.trim().split(/\r?\n/).filter(l => l.trim().startsWith("|") && l.trim().endsWith("|"));
+      if (lines.length < 3) return match;
+
+      const parseCells = (line) => line.split("|").slice(1, -1).map(c => c.trim());
+      const headers = parseCells(lines[0]);
+      const dataRows = lines.slice(2).map(parseCells);
+
+      const thHtml = headers.map(h => {
+        let cleanH = h.replace(/\*\*(.*?)\*\*/g, "$1");
+        return `<th style="padding:0.5rem 0.65rem; text-align:left; font-weight:700; border-bottom:2px solid #bae6fd; font-size:0.83rem;">${cleanH}</th>`;
+      }).join("");
+
+      const trHtml = dataRows.map((row, idx) => {
+        const bg = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
+        const tdHtml = row.map(cell => {
+          let cleanCell = cell.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+          return `<td style="padding:0.5rem 0.65rem; border-bottom:1px solid #e2e8f0; font-size:0.82rem; color:#1e293b;">${cleanCell}</td>`;
+        }).join("");
+        return `<tr style="background:${bg};">${tdHtml}</tr>`;
+      }).join("");
+
+      return `
+        <div class="prescription-box-card" style="margin:0.85rem 0; background:#f0f9ff; border:2px solid #0284c7; border-radius:10px; overflow:hidden; box-shadow:0 4px 14px rgba(2,132,199,0.12);">
+          <div style="background:linear-gradient(135deg, #0284c7, #0369a1); color:#fff; padding:0.55rem 0.85rem; display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:0.88rem;">
+            <div style="display:flex; align-items:center; gap:0.45rem;">
+              <span>🩺</span> <span>Dr. Aanya's Prescription Box (Rx)</span>
+            </div>
+            <span style="background:rgba(255,255,255,0.25); font-size:0.75rem; padding:0.15rem 0.5rem; border-radius:4px; font-weight:600;">Safe Supportive Care</span>
+          </div>
+          <div style="overflow-x:auto; padding:0.25rem;">
+            <table style="width:100%; border-collapse:collapse; min-width:480px;">
+              <thead>
+                <tr style="background:#e0f2fe; color:#0369a1;">
+                  ${thHtml}
+                </tr>
+              </thead>
+              <tbody>
+                ${trHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    });
+
+    // 2. Format Bold & Italic
+    processed = processed
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<em>$1</em>");
+
+    // 3. Clean bullet points
+    processed = processed.replace(/(?:^|\n)[*•]\s+([^\n]+)/g, "<br>• $1");
+
+    // 4. Line breaks
+    processed = processed.replace(/\n\n+/g, "<br><br>").replace(/\n/g, "<br>");
+
+    // 5. Clean up any excess breaks around card
+    processed = processed.replace(/<br>\s*(<div class="prescription-box-card")/g, "$1");
+    processed = processed.replace(/(<\/div>\s*<\/div>)\s*<br>/g, "$1");
+
+    return processed;
+  },
+
   appendMessage(sender, text, disclaimer = "", learnedMemory = null, isPersisted = false) {
     const container = document.getElementById("chat-messages-container");
     if (!container) return;
@@ -96,11 +167,8 @@ const HealthChat = {
     const avatarText = sender === "patient" ? "ME" : "Dr.";
     const avatarClass = sender === "patient" ? "avatar-patient" : "avatar-ai";
 
-    // Clean markdown-like formatting
-    let formattedText = text
-      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*(.*?)\*/g, "<em>$1</em>")
-      .replace(/\n/g, "<br>");
+    // Format rich text with Prescription Box
+    const formattedText = this.formatDoctorMessage(text);
 
     // Memory badge if learned facts occurred
     let memoryBadgeHtml = "";

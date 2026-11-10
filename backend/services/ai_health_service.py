@@ -80,12 +80,11 @@ def extract_clinical_facts_regex(user_message: str) -> dict:
 
 class AIHealthConsultationService:
     """
-    Senior MBBS/MD Clinical Consultant Doctor AI:
-    - Empathetic, warm, professional bedside manner (Dr. Aanya, MD).
-    - Active clinical listening: explains causes, home supportive care, red flags.
-    - Dynamic Patient Memory: Learns from patient messages across turns and updates Supabase database.
-    - Pharmacological safety checking (WHO essential medicines RAG + drug interactions).
-    - Multilingual fluency: Conversational English and natural Hinglish.
+    Senior MBBS/MD Clinical Consultant Doctor AI (Dr. Aanya):
+    - Short, point-to-point clinical triage (no long essays).
+    - Prescribes safe supportive/OTC medicines in a structured Prescription Box (Rx) with:
+      Medicine name, frequency (times a day), when to take, duration (how many days), and key notes.
+    - Active clinical listening & dynamic memory learning saved directly to database.
     - Life-threatening red flag emergency screening (Call 112 / 108 / 911).
     """
 
@@ -104,7 +103,7 @@ class AIHealthConsultationService:
     @staticmethod
     def generate_health_guidance(user_message: str, conversation_history: list = None, patient_profile: dict = None) -> dict:
         """
-        Generates empathetic, doctor-style clinical guidance with dynamic patient learning.
+        Generates short, point-to-point doctor guidance with a mandatory Prescription Box.
         """
         # Step 1: Immediate Red Flag Emergency Screening
         is_red_flag, red_flag_desc = AIHealthConsultationService.screen_emergency_red_flags(user_message)
@@ -149,8 +148,7 @@ class AIHealthConsultationService:
                 f"• Gender: {gender} | Blood Group: {blood_group}\n"
                 f"• Known Allergies: {known_allergies}\n"
                 f"• Chronic Conditions / Medical History: {known_conditions}\n"
-                f"CLINICAL INSTRUCTION: You already know this patient's medical history. Greet them warmly by name if it's the start of the chat. "
-                f"Always cross-check your guidance against their known allergies and chronic conditions."
+                f"CLINICAL INSTRUCTION: Address the patient warmly by name. Cross-check your guidance against their known allergies and chronic conditions."
             )
 
         # Step 3: Pharmacology Knowledge RAG (Retrieval-Augmented Generation)
@@ -183,30 +181,32 @@ class AIHealthConsultationService:
         except Exception as e:
             logger.warning("Medicine RAG lookup failed: %s", e)
 
-        # Step 4: Doctor Persona System Prompt
+        # Step 4: Doctor Persona System Prompt (Short, Point-to-Point + Prescription Box)
         system_prompt = (
             "You are Dr. Aanya, a highly respected Senior Consultant Clinical Doctor (MBBS, MD) at AI Health Agent.\n"
-            "YOUR CLINICAL CONSULTATION MANNER:\n"
-            "1. Talk like a real, caring, highly competent medical doctor. Use a warm, reassuring, and empathetic tone.\n"
-            "2. Multilingual: If the patient writes in Hindi/Hinglish (e.g. 'sar dard', 'ulti jaisa'), respond in natural, friendly Hinglish. If in English, respond in clear, compassionate English.\n"
-            "3. Active Clinical Listening & Guidance:\n"
-            "   - Reassure the patient first so they feel heard and cared for.\n"
-            "   - Provide clear Clinical Reasoning: explain in simple terms what might be happening (e.g. tension headache, viral irritation, migraine, gastric reflux).\n"
-            "   - Offer practical Home Care and Supportive Measures (hydration, rest, dietary care, light meals).\n"
-            "   - Clearly state Red Flag Warning Signs when they should immediately seek in-person emergency or specialist care.\n"
-            "4. Dynamic Patient Memory & Learning:\n"
-            "   - If the patient mentions an allergy (e.g. 'allergic to penicillin', 'dust allergy') or a chronic condition (e.g. 'asthma', 'diabetes', 'high BP'), or regular medications, acknowledge it warmly.\n"
-            "   - At the VERY END of your response, output a learning tag formatted exactly as:\n"
-            "     LEARNED: allergy: <allergen or none> | condition: <condition or none>\n"
-            "5. Follow-up Clickable Options:\n"
-            "   - End your response with 3 natural clickable follow-up options for the patient, formatted exactly as:\n"
-            "     OPTIONS: Option 1 | Option 2 | Option 3\n"
-            "6. Safety & Boundaries: Do not write prescription dosages for schedule H drugs. Emphasize that you provide clinical triage guidance."
+            "CRITICAL CONSULTATION INSTRUCTIONS (STRICTLY ENFORCE):\n"
+            "1. KEEP YOUR RESPONSE SHORT, CRISP, AND POINT-TO-POINT. Never write long essays or wordy paragraphs.\n"
+            "2. MULTILINGUAL: If the patient writes in Hindi/Hinglish (e.g. 'sar dard', 'acidity', 'ulti'), reply in warm, natural Hinglish. If in English, reply in clean, concise English.\n"
+            "3. RESPONSE FORMAT (USE THESE 3 CONCISE SECTIONS):\n"
+            "   • 🩺 **Clinical Assessment:** (2 short bullet points on the most probable causes)\n"
+            "   • 🏠 **Home Supportive Care:** (2-3 short bullet points on immediate relief, diet, hydration)\n"
+            "   • ⚠️ **Red Flag Warnings:** (1-2 short bullet points on critical signs to visit ER)\n"
+            "4. PRESCRIPTION BOX (MANDATORY AT THE END OF EVERY MEDICAL ADVICE):\n"
+            "   You MUST prescribe 1-2 safe OTC or supportive medicines in a clear table formatted exactly as:\n"
+            "   📋 **PRESCRIPTION BOX (Rx):**\n"
+            "   | 💊 Medicine Name & Dose | 🕒 Times a Day (Frequency) | ⏰ When to Take | 📅 How Many Days | 📝 Key Note |\n"
+            "   | :--- | :--- | :--- | :--- | :--- |\n"
+            "   | [Medicine 1] | [e.g. 2 times a day] | [e.g. 30 min before breakfast / after meals with water] | [e.g. 3 to 5 days] | [Short clinical advice] |\n"
+            "   (Add a 2nd row for antacid, electrolyte/ORS, or fever relief if appropriate)\n"
+            "5. DYNAMIC PATIENT MEMORY: If the patient mentions an allergy or chronic condition, note it and append at the very end:\n"
+            "   LEARNED: allergy: <allergen or none> | condition: <condition or none>\n"
+            "6. FOLLOW-UP OPTIONS: Provide 3 short clickable options at the very end:\n"
+            "   OPTIONS: Option 1 | Option 2 | Option 3"
         )
 
         ai_response_text = None
         risk_category = "LOW"
-        ai_provider_used = "Senior Clinical Health Consultant"
+        ai_provider_used = "Dr. Aanya AI (Clinical Consultant)"
         follow_up_questions = []
         learned_allergies = []
         learned_conditions = []
@@ -233,8 +233,8 @@ class AIHealthConsultationService:
                         "system_instruction": {"parts": [{"text": full_system}]},
                         "contents": contents,
                         "generationConfig": {
-                            "temperature": 0.25,
-                            "maxOutputTokens": 2048
+                            "temperature": 0.2,
+                            "maxOutputTokens": 1000
                         }
                     }
 
@@ -317,7 +317,7 @@ class AIHealthConsultationService:
             if not any(c.lower() == x.lower() for x in learned_conditions):
                 learned_conditions.append(c)
 
-        # Step 8: High-Precision Empathetic Clinical Fallback (if AI service is offline)
+        # Step 8: High-Precision Empathetic Clinical Fallback (Short, Point-to-Point + Prescription Box)
         if not ai_response_text:
             cleaned_query = user_message.strip()
             lower_msg = cleaned_query.lower()
@@ -325,55 +325,121 @@ class AIHealthConsultationService:
             if "restart" in lower_msg or "reset" in lower_msg or "clear" in lower_msg:
                 ai_response_text = (
                     f"Hello {patient_name}! Our consultation has been refreshed. "
-                    "I am Dr. Aanya, your Clinical Health Consultant. What symptoms or questions can I help you check today?"
+                    "I am Dr. Aanya, your Clinical Health Consultant. What symptoms can I check for you today?"
                 )
                 follow_up_questions = [
-                    "Throbbing Headache & Nausea",
-                    "Dry Cough & Mild Fever",
-                    "Stomach Acidity & Bloating",
-                    "Body Fatigue & Muscle Ache"
+                    "Acidity & Bloating",
+                    "Headache & Nausea",
+                    "Cough & Mild Fever",
+                    "Body Ache & Fatigue"
                 ]
-            elif med_context and any(k in lower_msg for k in ["what is", "how to take", "can i take", "side effect", "dosage", "use"]):
-                ai_response_text = (
-                    f"Here is verified clinical pharmacology guidance regarding **{cleaned_query}**:\n\n"
-                    f"{med_context.strip()}\n\n"
-                    "• **Doctor's Advice:** Always take medications with adequate water and strictly adhere to prescribed limits."
-                )
-                follow_up_questions = ["Check Drug Interactions", "Find Verified Doctor", "Safe dosage guidelines"]
             else:
-                is_hinglish = any(w in lower_msg for w in ["dard", "sir", "sar", "pet", "ulti", "bukhar", "khansi", "gala", "chakkar", "mujhe", "hai"])
-                if is_hinglish:
-                    ai_response_text = (
-                        f"Namaste {patient_name}. Main Dr. Aanya hoon. Aapki takleef sunkar mujhe dhyan aaya ki aap **{cleaned_query}** se pareshan hain.\n\n"
-                        "**Doctor's Clinical Observation:**\n"
-                        "Aam taur par yeh lakshan thakaan, mausam ke badlav, viral fatigue ya gastric irritation ki wajah se ho sakte hain.\n\n"
-                        "**Gharelu Upay aur Aaram (Supportive Care):**\n"
-                        "1. **Adequate Rest:** Ek shant kamre me aaram karein aur phone/screen se thodi doori banayein.\n"
-                        "2. **Hydration:** Ghoont-ghoont karke halka gunguna paani ya ORS piyein.\n"
-                        "3. **Light Meals:** Tel-masale aur bhari khane se bachein; khichdi ya dal-chawal lein.\n\n"
-                        "⚠️ **Red Flag Warning:** Agar dard achanak bohot tez ho jaye, saans lene me takleef ho, ya 102°F se zyada bukhar ho, toh turant doctor ko consult karein."
-                    )
-                    follow_up_questions = [
-                        "Kyunki dard kal se hai, kya dawa lu?",
-                        "Kya mujhe doctor ko dikhana chahiye?",
-                        "Gharelu upay aur batayein"
-                    ]
+                is_hinglish = any(w in lower_msg for w in ["dard", "sir", "sar", "pet", "ulti", "bukhar", "khansi", "gala", "chakkar", "mujhe", "hai", "khana"])
+
+                # Determine clinical condition for targeted short response + prescription
+                if any(w in lower_msg for w in ["acidity", "gas", "bloat", "pet", "indigestion", "heartburn", "acid"]):
+                    if is_hinglish:
+                        ai_response_text = (
+                            f"Namaste {patient_name}, main Dr. Aanya hoon. Acidity aur bloating ke liye yeh points follow karein:\n\n"
+                            "🩺 **Clinical Assessment:**\n"
+                            "• **Indigestion (Dyspepsia):** Khana jaldi khane ya spicy/oily khane se gas banna.\n"
+                            "• **Acid Reflux:** Pet ka acid upar aane se pet phoolna aur jalan hona.\n\n"
+                            "🏠 **Home Supportive Care:**\n"
+                            "• Khana khane ke baad 10-15 minute dheere tehele; turant bistar par na letein.\n"
+                            "• Thoda-thoda karke gunguna paani piyein; chai/coffee aur cold drink se bachein.\n"
+                            "• Ek baar mein zyada khane ki jagah halka aur saadha khana lein.\n\n"
+                            "⚠️ **Red Flag Warnings:**\n"
+                            "• Pet me achanak bohot tez dard hona ya baar-baar ulti aana.\n"
+                            "• Kale rang ka mal (black stool) ya nigalne me dard hona.\n\n"
+                            "📋 **PRESCRIPTION BOX (Rx):**\n"
+                            "| 💊 Medicine Name & Dose | 🕒 Times a Day (Frequency) | ⏰ When to Take | 📅 How Many Days | 📝 Key Note |\n"
+                            "| :--- | :--- | :--- | :--- | :--- |\n"
+                            "| **Tab. Pantoprazole 40mg** | Din mein 1 baar | Subah nashte se 30 min pehle | 3 - 5 din | Pet ka acid kam karne ke liye |\n"
+                            "| **Syp. Digene Gel (10ml)** | Din mein 2 baar | Khana khane ke 1 ghante baad | 3 din | Gas aur jalan se turant aaram |"
+                        )
+                    else:
+                        ai_response_text = (
+                            f"Hello {patient_name}, I am Dr. Aanya. Here is your quick point-to-point assessment and prescription for acidity and bloating:\n\n"
+                            "🩺 **Clinical Assessment:**\n"
+                            "• **Indigestion (Dyspepsia):** Delayed digestion causing gas buildup after meals.\n"
+                            "• **Acid Reflux (GERD):** Excess gastric acid irritated by spicy foods or stress.\n\n"
+                            "🏠 **Home Supportive Care:**\n"
+                            "• Take a light 15-minute walk after meals; do not recline for 2 hours.\n"
+                            "• Sip warm water or ginger tea; strictly avoid carbonated soda and caffeine.\n"
+                            "• Eat smaller, frequent portions and chew thoroughly.\n\n"
+                            "⚠️ **Red Flag Warnings:**\n"
+                            "• Sharp, severe abdominal pain radiating to your back.\n"
+                            "• Dark/black tarry stools or persistent vomiting.\n\n"
+                            "📋 **PRESCRIPTION BOX (Rx):**\n"
+                            "| 💊 Medicine Name & Dose | 🕒 Times a Day (Frequency) | ⏰ When to Take | 📅 How Many Days | 📝 Key Note |\n"
+                            "| :--- | :--- | :--- | :--- | :--- |\n"
+                            "| **Pantoprazole 40mg (1 Tab)** | Once daily | 30 mins before breakfast | 3 - 5 days | Reduces stomach acid production |\n"
+                            "| **Digene Antacid Gel (10ml)** | 2 to 3 times a day | 1 hour after meals | 3 days | Rapid relief from gas & heartburn |"
+                        )
+                    follow_up_questions = ["What food should I avoid?", "Can I drink milk?", "When should I consult in person?"]
+
+                elif any(w in lower_msg for w in ["headache", "sir dard", "sar dard", "migraine"]):
+                    if is_hinglish:
+                        ai_response_text = (
+                            f"Namaste {patient_name}. Sar dard ke liye quick points aur safe prescription yeh hai:\n\n"
+                            "🩺 **Clinical Assessment:**\n"
+                            "• **Tension Headache:** Screen time, neend ki kami ya stress ki wajah se maspeshiyo me khinchav.\n"
+                            "• **Dehydration / Fatigue:** Paani ki kami se sar me bhaari-pan.\n\n"
+                            "🏠 **Home Supportive Care:**\n"
+                            "• Ek shaant aur andhere kamre me aaram karein; phone screen band rakhein.\n"
+                            "• Khoob paani ya nariyal paani piyein.\n"
+                            "• Mathe par thande paani ki patti rakhein.\n\n"
+                            "⚠️ **Red Flag Warnings:**\n"
+                            "• Achanak aane wala bohot tez dard (thunderclap) ya gardan me akad.\n"
+                            "• Aankhon ke aage andhera chhana ya bolne me takleef.\n\n"
+                            "📋 **PRESCRIPTION BOX (Rx):**\n"
+                            "| 💊 Medicine Name & Dose | 🕒 Times a Day (Frequency) | ⏰ When to Take | 📅 How Many Days | 📝 Key Note |\n"
+                            "| :--- | :--- | :--- | :--- | :--- |\n"
+                            "| **Tab. Paracetamol 500mg** | Din mein 2 baar | Khana khane ke baad paani se | 2 - 3 din | Sar dard aur thakan ke liye |\n"
+                            "| **ORS / Hydration Drink** | Din mein 1 sachet | 1 litre paani me gholkar | 2 din | Sharir me paani ki kami poori kare |"
+                        )
+                    else:
+                        ai_response_text = (
+                            f"Hello {patient_name}, here is your concise clinical assessment and prescription for headache relief:\n\n"
+                            "🩺 **Clinical Assessment:**\n"
+                            "• **Tension Headache:** Eye strain, stress, or lack of quality sleep.\n"
+                            "• **Dehydration Fatigue:** Fluid deficit triggering cerebral vascular sensitivity.\n\n"
+                            "🏠 **Home Supportive Care:**\n"
+                            "• Rest in a quiet, dimly lit room; step away from mobile/laptop screens.\n"
+                            "• Hydrate with water or electrolyte fluids steadily.\n"
+                            "• Apply a cold compress to your forehead or temples.\n\n"
+                            "⚠️ **Red Flag Warnings:**\n"
+                            "• Sudden explosive headache or accompanying neck stiffness.\n"
+                            "• Vision blurring, limb weakness, or confusion.\n\n"
+                            "📋 **PRESCRIPTION BOX (Rx):**\n"
+                            "| 💊 Medicine Name & Dose | 🕒 Times a Day (Frequency) | ⏰ When to Take | 📅 How Many Days | 📝 Key Note |\n"
+                            "| :--- | :--- | :--- | :--- | :--- |\n"
+                            "| **Paracetamol 500mg (1 Tab)** | Twice a day | After meals with water | 2 - 3 days | Safe pain and tension relief |\n"
+                            "| **Oral Rehydration Salts (ORS)** | 1 sachet daily | Dissolved in 1L drinking water | 2 days | Restores vital hydration balance |"
+                        )
+                    follow_up_questions = ["Is this a migraine?", "Can I take coffee?", "Check my blood pressure"]
+
                 else:
+                    # General illness / fever / fatigue
                     ai_response_text = (
-                        f"Hello {patient_name}, I am Dr. Aanya. I hear your concern regarding **{cleaned_query}**.\n\n"
-                        "**Clinical Assessment & Possibilities:**\n"
-                        "Symptoms like these commonly stem from viral fatigue, tension, mild dehydration, or everyday physical strain.\n\n"
-                        "**Recommended Supportive Home Care:**\n"
-                        "1. **Rest & Recovery:** Rest in a calm, dimly lit room and avoid straining your eyes.\n"
-                        "2. **Hydration:** Sip water steadily throughout the day or take electrolyte fluids.\n"
-                        "3. **Gentle Nutrition:** Stick to bland, easily digestible food (toast, soups, oatmeal).\n\n"
-                        "⚠️ **When to Seek Urgent Care:** If symptoms worsen significantly over the next 24 hours, or you develop severe fever, persistent vomiting, or difficulty breathing, please seek immediate in-person medical evaluation."
+                        f"Hello {patient_name}, here is your quick clinical assessment and supportive prescription:\n\n"
+                        "🩺 **Clinical Assessment:**\n"
+                        "• **Mild Viral or Seasonal Strain:** Everyday fatigue, weather change, or immune reaction.\n"
+                        "• **Physical Exhaustion:** Stress and inadequate rest.\n\n"
+                        "🏠 **Home Supportive Care:**\n"
+                        "• Prioritize 8 hours of uninterrupted rest; avoid strenuous physical exertion.\n"
+                        "• Maintain continuous hydration with warm fluids, soups, and water.\n"
+                        "• Eat freshly cooked, simple food (khichdi, oats, toast).\n\n"
+                        "⚠️ **Red Flag Warnings:**\n"
+                        "• High fever (>102°F) not subsiding with medication.\n"
+                        "• Breathing difficulty, chest pressure, or extreme lethargy.\n\n"
+                        "📋 **PRESCRIPTION BOX (Rx):**\n"
+                        "| 💊 Medicine Name & Dose | 🕒 Times a Day (Frequency) | ⏰ When to Take | 📅 How Many Days | 📝 Key Note |\n"
+                        "| :--- | :--- | :--- | :--- | :--- |\n"
+                        "| **Paracetamol 500mg** | Twice a day | After light food with water | 3 days | For body ache and fever control |\n"
+                        "| **Vitamin C + Zinc Chewable** | Once daily | After lunch | 5 days | Supports natural immune recovery |"
                     )
-                    follow_up_questions = [
-                        "What home remedies can help?",
-                        "Should I consult a specialist?",
-                        "Can I take OTC pain relief?"
-                    ]
+                    follow_up_questions = ["What diet helps fast recovery?", "When should I see a doctor?", "Check safe medications"]
 
         # Step 9: Append Clinical Memory Note if new facts were learned
         learned_summary = []
@@ -387,9 +453,8 @@ class AIHealthConsultationService:
 
         # Step 10: Ensure Clean Follow-Up Options
         if not follow_up_questions or len(follow_up_questions) < 2:
-            follow_up_questions = ["What home remedies help?", "When should I consult a doctor?", "Check safe medications"]
+            follow_up_questions = ["What food should I avoid?", "How soon will I feel better?", "When should I see a doctor?"]
 
-        # Determine risk level from text
         lower_resp = (ai_response_text or "").lower()
         if "high risk" in lower_resp or "urgent" in lower_resp or "emergency" in lower_resp:
             risk_category = "HIGH"
