@@ -1,8 +1,11 @@
 import uuid
 import re
 import json
+import logging
 from datetime import datetime
 from backend.database.connection import db_manager
+
+logger = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
 # 1. User Repository

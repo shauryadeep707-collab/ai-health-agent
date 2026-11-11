@@ -124,9 +124,41 @@ const Auth = {
         <button onclick="Auth.logout()" class="btn btn-outline btn-sm">Log Out</button>
       `;
     }
+  },
+
+  async checkDatabasePersistence() {
+    const alertBox = document.getElementById("alert-box");
+    if (!alertBox) return;
+
+    const host = window.location.hostname;
+    const isLocal = host === "127.0.0.1" || host === "localhost" || host === "";
+    if (isLocal) return;
+
+    try {
+      const res = await fetch("/api/health");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.is_persistent_cloud_db === false) {
+        let banner = document.getElementById("cloud-db-warning");
+        if (!banner) {
+          banner = document.createElement("div");
+          banner.id = "cloud-db-warning";
+          banner.style.cssText =
+            "background:#fffbeb;border:1px solid #f59e0b;color:#92400e;border-radius:8px;padding:0.8rem 1rem;margin-bottom:1rem;font-size:0.83rem;line-height:1.45;";
+          alertBox.parentNode.insertBefore(banner, alertBox);
+        }
+        banner.innerHTML = `
+          <strong>⚠️ Temporary Storage Mode Active:</strong> Cloud PostgreSQL (<code>DATABASE_URL</code>) is not connected yet, so new accounts reset when the server restarts.<br>
+          <span style="color:#78350f;">Fix: Add a PostgreSQL <code>DATABASE_URL</code> in Render Environment Variables &amp; redeploy for permanent storage.</span>
+        `;
+      }
+    } catch (e) {
+      // Ignore silent health check errors
+    }
   }
 };
 
 document.addEventListener("DOMContentLoaded", () => {
   Auth.updateHeaderNav();
+  Auth.checkDatabasePersistence();
 });

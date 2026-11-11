@@ -1,3 +1,9 @@
+databases:
+  - name: ai-health-db
+    plan: free
+    databaseName: ai_health_db
+    user: ai_health_user
+
 services:
   - type: web
     name: ai-health-agent
@@ -10,7 +16,11 @@ services:
       - key: FLASK_ENV
         value: production
       - key: DB_TYPE
-        value: supabase
+        value: postgres
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ai-health-db
+          property: connectionString
       - key: SECRET_KEY
         value: prod-secure-secret-key-32-chars-minimum-health-agent-2026
       - key: JWT_SECRET_KEY
@@ -18,6 +28,6 @@ services:
       - key: AI_PROVIDER
         value: gemini
       - key: GEMINI_MODEL
-        value: gemini-3.5-flash-lite
+        value: gemini-3-flash-preview
       - key: GEMINI_API_KEY
         sync: false

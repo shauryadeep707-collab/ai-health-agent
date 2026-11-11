@@ -1,7 +1,9 @@
 import os
+import re
 from pathlib import Path
 from flask import Flask, send_from_directory, jsonify, request
 from backend.config import Config
+from backend.database.connection import db_manager
 from backend.routes.auth_routes import auth_bp
 from backend.routes.doctor_routes import doctor_bp
 from backend.routes.patient_routes import patient_bp
@@ -43,6 +45,19 @@ def create_app(config_class=Config):
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
             response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
         return response
+
+    # Health & Persistence Diagnostic Route
+    @app.route("/api/health", methods=["GET"])
+    def health_check():
+        raw_err = getattr(db_manager, "connection_error", None)
+        safe_err = re.sub(r"://[^@]+@", "://***:***@", str(raw_err)) if raw_err else None
+        return jsonify({
+            "success": True,
+            "status": "healthy",
+            "db_type": db_manager.db_type,
+            "is_persistent_cloud_db": bool(getattr(db_manager, "is_persistent_cloud_db", False)),
+            "connection_error": safe_err
+        })
 
     # Frontend Route Servicing
     @app.route("/", methods=["GET"])
@@ -93,7 +108,7 @@ app = create_app()
 if __name__ == "__main__":
     print(f"================================================================")
     print(f" AI Health Agent Server starting on http://{Config.HOST}:{Config.PORT}")
-    print(f" Database Mode: {Config.DB_TYPE.upper()}")
+    print(f" Database Mode: {db_manager.db_type.upper()} (Persistent Cloud DB: {db_manager.is_persistent_cloud_db})")
     print(f" AI Provider: {Config.AI_PROVIDER.upper()}")
     print(f" DigiLocker Mode: {Config.DIGILOCKER_ENV.upper()}")
     print(f"================================================================")

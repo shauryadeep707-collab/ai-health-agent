@@ -6,6 +6,13 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
+def _normalize_pg_url(url: str) -> str:
+    url = (url or "").strip()
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    return url
+
+
 class Config:
     # Flask Core
     SECRET_KEY = os.getenv("SECRET_KEY", "prod-secure-secret-key-32-chars-minimum-health-agent-2026")
@@ -17,11 +24,13 @@ class Config:
     DEBUG = os.getenv("FLASK_DEBUG", "1") == "1"
 
     # Database
-    _default_pg_b64 = "cG9zdGdyZXNxbDovL3Bvc3RncmVzLmpveGZ3YmRsaWFmZGRicHhqaXluOmFpaGVhbHRoMTIwNiU0MEBhd3MtMC1hcC1ub3J0aGVhc3QtMi5wb29sZXIuc3VwYWJhc2UuY29tOjU0MzIvcG9zdGdyZXM="
-    import base64 as _b64
-    _default_pg_url = _b64.b64decode(_default_pg_b64).decode("utf-8")
-    SUPABASE_DB_URL = os.getenv("SUPABASE_DB_URL", "") or os.getenv("DATABASE_URL", "") or _default_pg_url
-    _default_db_type = "supabase" if (SUPABASE_DB_URL and ("postgres" in SUPABASE_DB_URL or "supabase" in SUPABASE_DB_URL)) else "sqlite"
+    DATABASE_URL = _normalize_pg_url(os.getenv("DATABASE_URL", ""))
+    SUPABASE_DB_URL = _normalize_pg_url(os.getenv("SUPABASE_DB_URL", "")) or DATABASE_URL
+    _has_pg_url = bool(
+        (DATABASE_URL and "postgres" in DATABASE_URL)
+        or (SUPABASE_DB_URL and ("postgres" in SUPABASE_DB_URL or "supabase" in SUPABASE_DB_URL))
+    )
+    _default_db_type = "postgres" if _has_pg_url else "sqlite"
     DB_TYPE = os.getenv("DB_TYPE", _default_db_type).lower()
     SQLITE_DB_PATH = BASE_DIR / os.getenv("SQLITE_DB_PATH", "database/ai_health.db")
     ORACLE_USER = os.getenv("ORACLE_USER", "ai_health_user")
