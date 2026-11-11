@@ -235,8 +235,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/auth.js?v=3.2"></script>
+  <script src="js/auth.js?v=3.3"></script>
   <script src="js/doctor-verification.js"></script>
+  <script src="js/appointments.js?v=3.4"></script>
   <script>
     function switchDocTab(tabName) {
       document.querySelectorAll(".dashboard-tab-content").forEach(el => el.classList.remove("active"));
@@ -321,14 +322,14 @@
                       <td>
                         <div style="display:flex; gap:0.35rem; align-items:center; flex-wrap:wrap;">
                           ${a.status === 'CONFIRMED' ? `
-                            <a href="https://meet.jit.si/AIHeal-Consult-${encodeURIComponent(a.appointment_id)}" 
-                               target="_blank" 
-                               rel="noopener" 
-                               class="btn btn-primary btn-sm" 
-                               style="display:inline-flex; align-items:center; gap:0.25rem; text-decoration:none; font-weight:700; background:#0284c7;">
-                              📹 Start Video Meet ↗
-                            </a>
+                            <button onclick="Appointments.openChatModal('${a.appointment_id}')" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:0.25rem; font-weight:700; background:#0284c7;">
+                              💬 Open Patient Chat
+                            </button>
                             <button onclick="updateDoctorApt('${a.appointment_id}', 'COMPLETED')" class="btn btn-primary btn-sm">Mark Complete</button>
+                          ` : (a.status === 'COMPLETED' ? `
+                            <button onclick="Appointments.openChatModal('${a.appointment_id}', true)" class="btn btn-outline btn-sm">
+                              💬 View Chat
+                            </button>
                           ` : (a.status === 'BOOKED' ? `
                             <button onclick="updateDoctorApt('${a.appointment_id}', 'CONFIRMED')" class="btn btn-secondary btn-sm">Confirm & Accept</button>
                             <button onclick="updateDoctorApt('${a.appointment_id}', 'CANCELLED')" class="btn btn-outline btn-sm">Decline</button>

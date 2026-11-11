@@ -586,6 +586,24 @@ class ConsultationRepository:
         return db_manager.execute_query(query, {"consultation_id": consultation_id}, fetchone=True)
 
     @staticmethod
+    def get_or_create_for_appointment(consultation_id, patient_id, doctor_id, title="Doctor Appointment Chat"):
+        existing = ConsultationRepository.find_by_id(consultation_id)
+        if existing:
+            return existing
+        query = """
+        INSERT OR IGNORE INTO CONSULTATIONS
+        (consultation_id, patient_id, assigned_doctor_id, title, consult_type, risk_category, red_flag_alert, is_shared_with_doctor)
+        VALUES (:consultation_id, :patient_id, :assigned_doctor_id, :title, 'DOCTOR_CONSULT', 'LOW', 0, 1)
+        """
+        db_manager.execute_query(query, {
+            "consultation_id": consultation_id,
+            "patient_id": patient_id,
+            "assigned_doctor_id": doctor_id,
+            "title": (title or "Doctor Appointment Chat")[:200]
+        })
+        return ConsultationRepository.find_by_id(consultation_id)
+
+    @staticmethod
     def list_by_patient(patient_id):
         query = """
         SELECT c.*, d.specialty, u.full_name as doctor_name 
@@ -797,7 +815,7 @@ class AppointmentRepository:
     @staticmethod
     def list_by_patient(patient_id):
         query = """
-        SELECT a.*, d.specialty, d.clinic_address, d.consultation_fee, u.full_name as doctor_name
+        SELECT a.*, d.specialty, d.clinic_address, d.consultation_fee, d.bio, u.full_name as doctor_name
         FROM APPOINTMENTS a
         JOIN DOCTOR_PROFILES d ON a.doctor_id = d.doctor_id
         JOIN USERS u ON d.user_id = u.user_id

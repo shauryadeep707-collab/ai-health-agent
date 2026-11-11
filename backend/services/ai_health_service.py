@@ -101,9 +101,10 @@ class AIHealthConsultationService:
         return False, ""
 
     @staticmethod
-    def generate_health_guidance(user_message: str, conversation_history: list = None, patient_profile: dict = None) -> dict:
+    def generate_health_guidance(user_message: str, conversation_history: list = None, patient_profile: dict = None, doctor_profile: dict = None) -> dict:
         """
         Generates short, point-to-point doctor guidance with a mandatory Prescription Box.
+        Supports both Dr. Aanya (General AI Assistant) and appointed AI Specialist doctors (e.g. Dr. Priya Sharma).
         """
         # Step 1: Immediate Red Flag Emergency Screening
         is_red_flag, red_flag_desc = AIHealthConsultationService.screen_emergency_red_flags(user_message)
@@ -181,9 +182,24 @@ class AIHealthConsultationService:
         except Exception as e:
             logger.warning("Medicine RAG lookup failed: %s", e)
 
-        # Step 4: Doctor Persona System Prompt (Short, Point-to-Point + Prescription Box)
+        # Step 4: Doctor Persona Setup (Default: Dr. Aanya; Appointment AI Doctor: e.g. Dr. Priya Sharma)
+        doctor_display_name = "Dr. Aanya"
+        doctor_specialty = "General Medicine / Internal Medicine"
+        doctor_qual = "MBBS, MD"
+        appointment_ctx = ""
+
+        if doctor_profile:
+            raw_doc_name = (doctor_profile.get("full_name") or "Priya Sharma").strip()
+            clean_doc = re.sub(r"^(?:dr\.?\s*)+", "", raw_doc_name, flags=re.IGNORECASE).strip()
+            doctor_display_name = f"Dr. {clean_doc}" if clean_doc else "Dr. Priya Sharma"
+            doctor_specialty = doctor_profile.get("specialty") or "Clinical Specialist"
+            doctor_qual = doctor_profile.get("medical_qualification") or doctor_profile.get("qualification") or "MBBS, MD"
+            reason = (doctor_profile.get("appointment_reason") or "").strip()
+            if reason:
+                appointment_ctx = f"\nAPPOINTMENT CONTEXT: You are consulting with this patient during their confirmed appointment. Reason for visit: {reason}"
+
         system_prompt = (
-            "You are Dr. Aanya, a highly respected Senior Consultant Clinical Doctor (MBBS, MD) at AI Health Agent.\n"
+            f"You are {doctor_display_name}, a highly respected Senior Consultant {doctor_specialty} Doctor ({doctor_qual}) at AI Health Agent.{appointment_ctx}\n"
             "CRITICAL CONSULTATION INSTRUCTIONS (STRICTLY ENFORCE):\n"
             "1. KEEP YOUR RESPONSE SHORT, CRISP, AND POINT-TO-POINT. Never write long essays or wordy paragraphs.\n"
             "2. MULTILINGUAL: If the patient writes in Hindi/Hinglish (e.g. 'sar dard', 'acidity', 'ulti'), reply in warm, natural Hinglish. If in English, reply in clean, concise English.\n"
@@ -206,7 +222,7 @@ class AIHealthConsultationService:
 
         ai_response_text = None
         risk_category = "LOW"
-        ai_provider_used = "Dr. Aanya AI (Clinical Consultant)"
+        ai_provider_used = f"{doctor_display_name} AI (Clinical Consultant)"
         follow_up_questions = []
         learned_allergies = []
         learned_conditions = []
@@ -248,7 +264,7 @@ class AIHealthConsultationService:
                                 raw_text = parts[0].get("text", "").strip()
                                 if raw_text:
                                     ai_response_text = raw_text
-                                    ai_provider_used = f"Dr. Aanya AI (Gemini {model_name})"
+                                    ai_provider_used = f"{doctor_display_name} AI (Gemini {model_name})"
                                     break
                     else:
                         logger.warning("Gemini %s returned HTTP %s: %s", model_name, res.status_code, res.text[:200])
@@ -262,7 +278,7 @@ class AIHealthConsultationService:
                 prompt_full = (
                     f"{system_prompt}\n\n{patient_context}\n\n{med_context}\n"
                     f"Patient Query: {user_message}\n"
-                    "Dr. Aanya (Senior Clinical Consultant):"
+                    f"{doctor_display_name} (Senior Clinical Consultant):"
                 )
                 res = requests.post(
                     ollama_url,
@@ -278,7 +294,7 @@ class AIHealthConsultationService:
                     raw_ollama = res.json().get("response", "").strip()
                     if raw_ollama:
                         ai_response_text = raw_ollama
-                        ai_provider_used = f"Dr. Aanya AI (Ollama {Config.OLLAMA_MODEL})"
+                        ai_provider_used = f"{doctor_display_name} AI (Ollama {Config.OLLAMA_MODEL})"
             except Exception as e:
                 logger.info("Ollama local inference skipped: %s", e)
 
@@ -325,7 +341,7 @@ class AIHealthConsultationService:
             if "restart" in lower_msg or "reset" in lower_msg or "clear" in lower_msg:
                 ai_response_text = (
                     f"Hello {patient_name}! Our consultation has been refreshed. "
-                    "I am Dr. Aanya, your Clinical Health Consultant. What symptoms can I check for you today?"
+                    f"I am {doctor_display_name}, your Clinical Health Consultant. What symptoms can I check for you today?"
                 )
                 follow_up_questions = [
                     "Acidity & Bloating",
@@ -340,7 +356,7 @@ class AIHealthConsultationService:
                 if any(w in lower_msg for w in ["acidity", "gas", "bloat", "pet", "indigestion", "heartburn", "acid"]):
                     if is_hinglish:
                         ai_response_text = (
-                            f"Namaste {patient_name}, main Dr. Aanya hoon. Acidity aur bloating ke liye yeh points follow karein:\n\n"
+                            f"Namaste {patient_name}, main {doctor_display_name} hoon. Acidity aur bloating ke liye yeh points follow karein:\n\n"
                             "🩺 **Clinical Assessment:**\n"
                             "• **Indigestion (Dyspepsia):** Khana jaldi khane ya spicy/oily khane se gas banna.\n"
                             "• **Acid Reflux:** Pet ka acid upar aane se pet phoolna aur jalan hona.\n\n"
@@ -359,7 +375,7 @@ class AIHealthConsultationService:
                         )
                     else:
                         ai_response_text = (
-                            f"Hello {patient_name}, I am Dr. Aanya. Here is your quick point-to-point assessment and prescription for acidity and bloating:\n\n"
+                            f"Hello {patient_name}, I am {doctor_display_name}. Here is your quick point-to-point assessment and prescription for acidity and bloating:\n\n"
                             "🩺 **Clinical Assessment:**\n"
                             "• **Indigestion (Dyspepsia):** Delayed digestion causing gas buildup after meals.\n"
                             "• **Acid Reflux (GERD):** Excess gastric acid irritated by spicy foods or stress.\n\n"
@@ -465,9 +481,9 @@ class AIHealthConsultationService:
             "message": ai_response_text,
             "risk_category": risk_category,
             "red_flag_alert": 0,
-            "disclaimer": "Medical Guidance Notice: Dr. Aanya provides clinical triage and educational guidance. It is not an in-person diagnostic examination.",
+            "disclaimer": f"Medical Guidance Notice: {doctor_display_name} provides clinical triage and educational guidance. It is not an in-person diagnostic examination.",
             "follow_up_questions": follow_up_questions,
-            "recommended_specialty": "General Medicine / Internal Medicine",
+            "recommended_specialty": doctor_specialty,
             "ai_provider": ai_provider_used,
             "learned_memory": {
                 "allergies": learned_allergies,
