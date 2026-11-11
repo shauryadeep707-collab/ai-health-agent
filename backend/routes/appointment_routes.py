@@ -247,9 +247,9 @@ def get_appointment_chat(appointment_id):
         reason_note = f' I see your visit reason: "{reason}".' if reason else ""
         if is_ai_doc:
             greeting = (
-                f"Hello {pat.get('full_name', 'there')}! I am **{doc_display}** ({doc.get('specialty', 'Specialist')} — AI Clinical Consultant).\n\n"
+                f"Hello {pat.get('full_name', 'there')}! I am **{doc_display}** ({doc.get('specialty', 'Specialist')}).\n\n"
                 f"Your appointment for **{apt['appointment_date']} at {apt['slot_time']}** is confirmed.{reason_note}\n\n"
-                "Please type your symptoms or questions below — I will reply immediately with point-to-point guidance and a safe Prescription Box."
+                "Let's start our consultation — tell me how you're feeling right now or what symptoms are bothering you, and we'll go step by step."
             )
         else:
             greeting = (

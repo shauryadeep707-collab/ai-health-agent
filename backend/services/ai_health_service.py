@@ -8,8 +8,8 @@ logger = logging.getLogger(__name__)
 
 # Clinical Emergency "Red-Flag" keywords and signs (Multilingual: English & Hinglish)
 RED_FLAG_PATTERNS = [
-    (r"\b(crushing|radiating|severe|tightness in|heaviness in|sharp)\s+.*?(chest|breast|heart)\b", "Severe acute chest pain (coronary event)"),
-    (r"\b(chest|heart)\s+.*?(pain|pressure|tightness|heaviness|burn)\b", "Chest pain or pressure (potential acute cardiac event)"),
+    (r"(?<!no\s)(?<!not\s)\b(crushing|radiating|severe|tightness in|heaviness in)\s+(?:\w+\s+){0,3}(chest|breast|heart)\b", "Chest pain emergency (severe acute coronary event)"),
+    (r"(?<!no\s)(?<!not\s)(?<!without\s)\b(chest|heart)\s+(?:\w+\s+){0,2}(pain|pressure|tightness|heaviness)\b", "Chest pain or pressure (potential acute cardiac event)"),
     (r"\b(chhati|seene|chaati)\s+(?:me|mein)\s+.*?(tez|bada|dard|pressure|jalan|ghutan)\b", "Severe acute chest pain (coronary emergency)"),
     (r"\b(can'?t breathe|shortness of breath|gasping|severe wheezing|struggling to breathe|saas (?:nahi aa|lene me|ful|ruk))\b", "Severe respiratory distress / hypoxia"),
     (r"\b(slurred speech|face drooping|facial droop|sudden weakness|arm numbness|loss of balance|adhrang|lakwa)\b", "Signs of acute cerebrovascular event (Stroke)"),
@@ -107,7 +107,21 @@ class AIHealthConsultationService:
         Supports both Dr. Aanya (General AI Assistant) and appointed AI Specialist doctors (e.g. Dr. Priya Sharma).
         """
         # Step 1: Immediate Red Flag Emergency Screening
+        # In Doctor Appointment Chat (doctor_profile), only trigger hard emergency block on explicit acute crises
+        # so mild/unqualified symptom mentions (e.g. "I have chest pain") allow the doctor to talk and triage normally first.
         is_red_flag, red_flag_desc = AIHealthConsultationService.screen_emergency_red_flags(user_message)
+        if is_red_flag and doctor_profile:
+            lower_q = user_message.lower()
+            is_unmistakable_crisis = any(
+                k in lower_q for k in [
+                    "crushing", "radiating", "can't breathe", "cant breathe", "gasping",
+                    "slurred speech", "face drooping", "vomiting blood", "coughing up blood",
+                    "unconscious", "passed out", "fainted", "seizure", "suicidal", "kill myself",
+                    "anaphylaxis", "throat closing", "behosh", "khoon ki ulti"
+                ]
+            )
+            if not is_unmistakable_crisis:
+                is_red_flag = False
 
         if is_red_flag:
             emergency_response = (
@@ -198,22 +212,43 @@ class AIHealthConsultationService:
             if reason:
                 appointment_ctx = f"\nAPPOINTMENT CONTEXT: You are consulting with this patient during their confirmed appointment. Reason for visit: {reason}"
 
+        patient_turns = sum(1 for m in (conversation_history or []) if m.get("sender_type") == "PATIENT")
+        lower_user_q = user_message.lower().strip()
+        is_greeting_only = bool(re.match(r"^(?:hi+|hello+|hey+|namaste|hlo|good\s+(?:morning|afternoon|evening))[\s!.,]*$", lower_user_q))
+        explicitly_wants_meds = any(k in lower_user_q for k in ["prescribe", "prescription", "medicine", "tablet", "dawai", "rx", "meds"])
+        talk_first_mode = is_greeting_only or (bool(doctor_profile) and patient_turns == 0 and not explicitly_wants_meds)
+
+        if talk_first_mode:
+            stage_instructions = (
+                "CONVERSATION STAGE: NORMAL DOCTOR CONSULTATION — TALK FIRST (DO NOT PRESCRIBE YET).\n"
+                "3. Keep your reply warm, natural, and conversational like a real doctor chatting (2 to 4 short sentences MAX).\n"
+                "   - Acknowledge the patient's message calmly.\n"
+                "   - Ask 1 or 2 brief, focused clinical questions first (e.g., how long it has been going on, whether mild or severe, triggers like food/stress, or any associated symptoms) before diagnosing or prescribing.\n"
+                "   - If the patient mentions chest discomfort, stay calm and ask if it feels mild/burning or heavy/squeezing with breathlessness (briefly note: seek 112 emergency care only if severe/crushing).\n"
+                "   - DO NOT include 'Clinical Assessment', 'Home Supportive Care' bullet walls, or any PRESCRIPTION BOX table in this turn.\n"
+            )
+        else:
+            stage_instructions = (
+                "CONVERSATION STAGE: CLINICAL EXPLANATION & PRESCRIPTION.\n"
+                "3. RESPONSE FORMAT (USE THESE 3 CONCISE SECTIONS):\n"
+                "   • 🩺 **Clinical Assessment:** (2 short bullet points on the most probable causes)\n"
+                "   • 🏠 **Home Supportive Care:** (2-3 short bullet points on immediate relief, diet, hydration)\n"
+                "   • ⚠️ **Red Flag Warnings:** (1-2 short bullet points on critical signs to visit ER)\n"
+                "4. PRESCRIPTION BOX (MANDATORY AT THE END OF MEDICAL ADVICE):\n"
+                "   You MUST prescribe 1-2 safe OTC or supportive medicines in a clear table formatted exactly as:\n"
+                "   📋 **PRESCRIPTION BOX (Rx):**\n"
+                "   | 💊 Medicine Name & Dose | 🕒 Times a Day (Frequency) | ⏰ When to Take | 📅 How Many Days | 📝 Key Note |\n"
+                "   | :--- | :--- | :--- | :--- | :--- |\n"
+                "   | [Medicine 1] | [e.g. 2 times a day] | [e.g. 30 min before breakfast / after meals with water] | [e.g. 3 to 5 days] | [Short clinical advice] |\n"
+                "   (Add a 2nd row for antacid, electrolyte/ORS, or fever relief if appropriate)\n"
+            )
+
         system_prompt = (
             f"You are {doctor_display_name}, a highly respected Senior Consultant {doctor_specialty} Doctor ({doctor_qual}) at AI Health Agent.{appointment_ctx}\n"
             "CRITICAL CONSULTATION INSTRUCTIONS (STRICTLY ENFORCE):\n"
             "1. KEEP YOUR RESPONSE SHORT, CRISP, AND POINT-TO-POINT. Never write long essays or wordy paragraphs.\n"
             "2. MULTILINGUAL: If the patient writes in Hindi/Hinglish (e.g. 'sar dard', 'acidity', 'ulti'), reply in warm, natural Hinglish. If in English, reply in clean, concise English.\n"
-            "3. RESPONSE FORMAT (USE THESE 3 CONCISE SECTIONS):\n"
-            "   • 🩺 **Clinical Assessment:** (2 short bullet points on the most probable causes)\n"
-            "   • 🏠 **Home Supportive Care:** (2-3 short bullet points on immediate relief, diet, hydration)\n"
-            "   • ⚠️ **Red Flag Warnings:** (1-2 short bullet points on critical signs to visit ER)\n"
-            "4. PRESCRIPTION BOX (MANDATORY AT THE END OF EVERY MEDICAL ADVICE):\n"
-            "   You MUST prescribe 1-2 safe OTC or supportive medicines in a clear table formatted exactly as:\n"
-            "   📋 **PRESCRIPTION BOX (Rx):**\n"
-            "   | 💊 Medicine Name & Dose | 🕒 Times a Day (Frequency) | ⏰ When to Take | 📅 How Many Days | 📝 Key Note |\n"
-            "   | :--- | :--- | :--- | :--- | :--- |\n"
-            "   | [Medicine 1] | [e.g. 2 times a day] | [e.g. 30 min before breakfast / after meals with water] | [e.g. 3 to 5 days] | [Short clinical advice] |\n"
-            "   (Add a 2nd row for antacid, electrolyte/ORS, or fever relief if appropriate)\n"
+            f"{stage_instructions}"
             "5. DYNAMIC PATIENT MEMORY: If the patient mentions an allergy or chronic condition, note it and append at the very end:\n"
             "   LEARNED: allergy: <allergen or none> | condition: <condition or none>\n"
             "6. FOLLOW-UP OPTIONS: Provide 3 short clickable options at the very end:\n"
@@ -250,11 +285,11 @@ class AIHealthConsultationService:
                         "contents": contents,
                         "generationConfig": {
                             "temperature": 0.2,
-                            "maxOutputTokens": 1000
+                            "maxOutputTokens": 2500
                         }
                     }
 
-                    res = requests.post(url, json=payload, timeout=10)
+                    res = requests.post(url, json=payload, timeout=15)
                     if res.status_code == 200:
                         data = res.json()
                         candidates = data.get("candidates", [])
@@ -349,6 +384,27 @@ class AIHealthConsultationService:
                     "Cough & Mild Fever",
                     "Body Ache & Fatigue"
                 ]
+            elif talk_first_mode:
+                is_hinglish = any(w in lower_msg for w in ["dard", "sir", "sar", "pet", "ulti", "bukhar", "khansi", "gala", "chakkar", "mujhe", "hai", "khana", "namaste"])
+                if is_greeting_only:
+                    ai_response_text = (
+                        f"Hello {patient_name}! I'm {doctor_display_name}. Good to connect with you — how are you feeling today, and what symptoms or questions can I help you with?"
+                    )
+                    follow_up_questions = ["I have chest discomfort", "Acidity after meals", "Headache & fatigue"]
+                elif is_hinglish:
+                    ai_response_text = (
+                        f"Namaste {patient_name}, main {doctor_display_name} hoon. Aapki problem samajhne ke liye pehle 2 chote sawaal:\n\n"
+                        "1. Yeh takleef **kab se** hai aur kitni tez (halki ya zyada) lag rahi hai?\n"
+                        "2. Kya iske saath koi aur lakshan (jaise bukhar, ghabrahat, saans phoolna, ya kisi dawai se allergy) bhi hai?"
+                    )
+                    follow_up_questions = ["Aaj subah se halki hai", "2-3 din se moderate hai", "Koi allergy nahi hai"]
+                else:
+                    ai_response_text = (
+                        f"Hello {patient_name}, I'm {doctor_display_name}. Before I suggest treatment, let's talk through two quick details:\n\n"
+                        "1. **How long** have you noticed these symptoms, and would you describe them as mild, moderate, or severe?\n"
+                        "2. Are you having any **other symptoms** (fever, nausea, breathlessness) or any known medication allergies?"
+                    )
+                    follow_up_questions = ["Started today & mild", "Since 2-3 days, moderate", "No allergies, need relief tips"]
             else:
                 is_hinglish = any(w in lower_msg for w in ["dard", "sir", "sar", "pet", "ulti", "bukhar", "khansi", "gala", "chakkar", "mujhe", "hai", "khana"])
 

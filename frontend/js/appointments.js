@@ -412,7 +412,9 @@ const Appointments = {
       });
 
       if (!readOnly && !isDoctorViewer && this.activeChatIsAiDoctor) {
-        this.renderChatChips(["What medicine should I take?", "Explain my symptoms", "Give lifestyle & diet tips"]);
+        if ((data.messages || []).length <= 1) {
+          this.renderChatChips(["I have chest discomfort", "Acidity & bloating", "Headache & mild fever"]);
+        }
       }
     } catch (err) {
       if (msgBox) msgBox.innerHTML = `<div class="alert alert-danger">Error loading chat: ${err.message}</div>`;
