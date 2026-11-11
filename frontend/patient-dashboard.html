@@ -142,16 +142,6 @@
 
         <li>
 
-          <a class="sidebar-link" onclick="switchTab('products')">
-
-            <span class="sidebar-icon">🛍️</span> Health Products
-
-          </a>
-
-        </li>
-
-        <li>
-
           <a class="sidebar-link" onclick="switchTab('profile')">
 
             <span class="sidebar-icon">⚙️</span> Profile & Consents
@@ -1002,61 +992,7 @@
 
       <!-- =====================================================================
 
-           TAB 7: HEALTH PRODUCTS
-
-           ===================================================================== -->
-
-      <section id="tab-products" class="dashboard-tab-content">
-
-        <div class="dashboard-header">
-
-          <div>
-
-            <h1 class="dashboard-title">Health Devices & Products Catalogue</h1>
-
-            <p class="dashboard-subtitle">Search diagnostic devices, monitors, and health products with real sellers</p>
-
-          </div>
-
-        </div>
-
-
-
-        <div class="panel" style="background:#f8fafc;">
-
-          <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
-
-            <input type="text" id="prod-search-input" class="form-control" placeholder="Search devices (e.g. BP monitor, glucometer, pulse oximeter)..." style="flex:1;">
-
-            <select id="prod-cat-select" class="form-control" style="max-width:220px;">
-
-              <option value="">All Categories</option>
-
-            </select>
-
-            <button onclick="searchProducts()" class="btn btn-primary">Search</button>
-
-          </div>
-
-          <div id="prod-suggestion-box" style="margin-top:0.5rem; font-size:0.85rem;"></div>
-
-        </div>
-
-
-
-        <div id="products-catalog-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1.5rem;">
-
-          <!-- Populated by JS -->
-
-        </div>
-
-      </section>
-
-
-
-      <!-- =====================================================================
-
-           TAB 8: PROFILE & CONSENTS
+           TAB 7: PROFILE & CONSENTS
 
            ===================================================================== -->
 
@@ -1477,12 +1413,6 @@
         renderDashRecentSearches();
 
         searchMedicines();
-
-      } else if (tabName === "products") {
-
-        loadProductCategories();
-
-        searchProducts();
 
       } else if (tabName === "profile") {
 
@@ -2225,138 +2155,6 @@ async function searchMedicines() {
           btn.innerHTML = origBtnText;
 
         }
-
-      }
-
-    }
-
-
-
-    async function loadProductCategories() {
-
-      try {
-
-        const res = await fetch("/api/products/categories");
-
-        const data = await res.json();
-
-        const sel = document.getElementById("prod-cat-select");
-
-        if (sel && data.success) {
-
-          sel.innerHTML = `<option value="">All Categories</option>` + data.categories.map(c => `<option value="${c}">${c}</option>`).join("");
-
-        }
-
-      } catch (e) {}
-
-    }
-
-
-
-    async function searchProducts() {
-
-      const q = document.getElementById("prod-search-input")?.value || "";
-
-      const cat = document.getElementById("prod-cat-select")?.value || "";
-
-      const grid = document.getElementById("products-catalog-grid");
-
-      const sugBox = document.getElementById("prod-suggestion-box");
-
-      if (!grid) return;
-
-
-
-      grid.innerHTML = `<p style="color:var(--slate-400); text-align:center; padding:2rem; grid-column:1/-1;">Loading product catalog...</p>`;
-
-
-
-      try {
-
-        const params = new URLSearchParams({ query: q, category: cat });
-
-        const res = await fetch(`/api/products/search?${params}`);
-
-        const data = await res.json();
-
-
-
-        if (sugBox) {
-
-          if (data.spelling_suggestion) {
-
-            sugBox.innerHTML = `Did you mean: <a href="javascript:void(0)" onclick="document.getElementById('prod-search-input').value='${data.spelling_suggestion}'; searchProducts();"><strong>${data.spelling_suggestion}</strong></a>?`;
-
-          } else {
-
-            sugBox.innerHTML = "";
-
-          }
-
-        }
-
-
-
-        if (data.success && data.products.length > 0) {
-
-          grid.innerHTML = data.products.map(p => `
-
-            <div class="panel" style="display:flex; flex-direction:column; justify-content:space-between; overflow:hidden; min-width:0; word-break:break-word; box-sizing:border-box;">
-
-              <div>
-
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
-
-                  <span class="badge ${p.is_demo_data ? 'badge-demo' : 'badge-verified'}">
-
-                    ${p.is_demo_data ? 'Sample Demo Product' : 'Verified Listing'}
-
-                  </span>
-
-                  <span style="font-weight:700; color:var(--primary); font-size:1.15rem;">₹${p.price}</span>
-
-                </div>
-
-                <h4 style="font-size:1rem; font-weight:700; color:var(--dark); margin-bottom:0.35rem;">
-
-                  ${p.product_name}
-
-                </h4>
-
-                <p style="font-size:0.8rem; color:var(--slate-400); margin-bottom:0.5rem;">Category: ${p.category}</p>
-
-                <p style="font-size:0.85rem; color:var(--slate-600); line-height:1.4; margin-bottom:1rem;">
-
-                  ${p.description}
-
-                </p>
-
-              </div>
-
-              <div>
-
-                <a href="${p.product_url || '#'}" target="_blank" rel="noopener" class="btn btn-outline btn-block btn-sm" style="width:100%; max-width:100%; white-space:normal; word-break:break-word; text-align:center; padding:0.5rem 0.75rem; font-size:0.84rem; line-height:1.35; box-sizing:border-box;">
-
-                  View on ${p.seller_name || 'Seller Site'} ↗
-
-                </a>
-
-              </div>
-
-            </div>
-
-          `).join("");
-
-        } else {
-
-          grid.innerHTML = `<p style="color:var(--slate-400); text-align:center; padding:2rem; grid-column:1/-1;">No products found.</p>`;
-
-        }
-
-      } catch (err) {
-
-        grid.innerHTML = `<p style="color:var(--danger); grid-column:1/-1;">Error loading products: ${err.message}</p>`;
 
       }
 
